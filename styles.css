@@ -345,7 +345,7 @@ body {
 .properties-panel {
     position: absolute;
     right: 20px;
-    top: 90px;
+    top: 150px;
     width: 250px;
     background: rgba(255,255,255,0.95);
     backdrop-filter: blur(10px);
