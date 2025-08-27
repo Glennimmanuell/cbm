@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bosch Rexroth Industrial Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <div id="mainHeader" class="main-header">
+        <div class="logo">
+            <img src="/bosch-rexroth.jpg" 
+                 style="height:40px; vertical-align:middle; margin-right:8px;">
+            Bosch Rexroth Industrial Suite
+        </div>
+        <div class="header-nav">
+            <button class="nav-btn active" onclick="showArchitecture()">Architecture Designer</button>
+            <button class="nav-btn" onclick="showMonitoring()">Condition Monitoring</button>
+            <button class="nav-btn" onclick="showNotifications()">Notifications</button>
+            <button class="nav-btn" onclick="exportAllConfiguration()">Export</button>
+            <input type="file" id="importFile" style="display:none" onchange="importAllConfiguration(this.files[0])" />
+            <button class="nav-btn"onclick="document.getElementById('importFile').click()">Import</button>
+        </div>
+    </div>
+
+    <!-- Architecture Designer Section -->
+    <div id="architectureSection" class="main-section active">
+        <div id="header" class="section-header">
+            <div class="section-title">
+                Bosch Rexroth Struxture
+            </div>
+            <div class="header-controls">
+                <button class="btn" onclick="clearCanvas()">Clear All</button>
+                <button class="btn" onclick="toggleGrid()">Toggle Grid</button>
+            </div>
+        </div>
+
+        <div id="sidebar">
+            <div class="component-category">
+                <div class="category-title">Field Level</div>
+                <div class="component-item" draggable="true" data-type="Sensor" data-icon="/sensor.png">
+                    <div class="component-icon"><img src="/sensor.png" alt="Sensor" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">Sensor</div>
+                </div>
+                <div class="component-item" draggable="true" data-type="Motor" data-icon="/electric-motor.png">
+                    <div class="component-icon"><img src="/electric-motor.png" alt="Motor" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">Motor</div>
+                </div>
+                <div class="component-item" draggable="true" data-type="VFD" data-icon="/ctrlx-efc.png">
+                    <div class="component-icon"><img src="/ctrlx-efc.png" alt="VFD" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">VFD</div>
+                </div>
+                <div class="component-item" draggable="true" data-type="CtrlX IO" data-icon="/ctrlx-io.png">
+                    <div class="component-icon"><img src="/ctrlx-io.png" alt="CtrlX IO" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">CtrlX IO</div>
+                </div>
+            </div>
+            
+            <div class="component-category">
+                <div class="category-title">Control Level</div>
+                <div class="component-item" draggable="true" data-type="CtrlX Core" data-icon="/ctrlx-core.png">
+                    <div class="component-icon"><img src="/ctrlx-core.png" alt="CtrlX Core" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">CtrlX Core</div>
+                </div>
+                <div class="component-item" draggable="true" data-type="HMI" data-icon="/ctrlx-hmi.png">
+                    <div class="component-icon"><img src="/ctrlx-hmi.png" alt="HMI" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">HMI</div>
+                </div>
+            </div>
+            
+            <div class="component-category">
+                <div class="category-title">Network & Communication</div>
+                <div class="component-item" draggable="true" data-type="Industrial Router" data-icon="/industrial-router.png">
+                    <div class="component-icon"><img src="/industrial-router.png" alt="Industrial Router" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">Industrial Router</div>
+                </div>
+                <div class="component-item" draggable="true" data-type="Network Switch" data-icon="/network-switch.png">
+                    <div class="component-icon"><img src="/network-switch.png" alt="Network Switch" style="width: 32px; height: 32px;"></div>
+                    <div class="component-name">Network Switch</div>
+                </div>
+            </div>
+            
+            <div class="component-category">
+                <div class="category-title">Enterprise Level</div>
+                <div class="component-item" draggable="true" data-type="Cloud" data-icon="☁️">
+                    <div class="component-icon">☁️</div>
+                    <div class="component-name">Cloud</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <div class="grid-overlay" id="grid"></div>
+            <canvas id="canvas"></canvas>
+            <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;">
+            </svg>
+        </div>
+
+        <div class="properties-panel" id="propertiesPanel">
+            <h3>Component Properties</h3>
+            <div class="property-group">
+                <label>Name</label>
+                <input type="text" id="componentName" placeholder="Component name">
+            </div>
+            <div class="property-group">
+                <label>Description</label>
+                <input type="text" id="componentDesc" placeholder="Description">
+            </div>
+            <div class="property-group">
+                <label>IP Address</label>
+                <input type="text" id="componentIP" placeholder="192.168.1.1">
+            </div>
+        </div>
+    </div>
+
+    <!-- Condition Monitoring Section -->
+    <div id="monitoringSection" class="main-section">
+        <div class="header monitoring-header">
+            <h1 class="logo">
+                Condition Based Monitoring
+            </h1>
+            <div class="status-bar">
+                <div class="system-status">
+                    <div class="status-indicator normal">
+                        <div class="status-dot" style="background: #4caf50;"></div>
+                        <span id="normalCount">0 Normal</span>
+                    </div>
+                    <div class="status-indicator warning">
+                        <div class="status-dot" style="background: #ff9800;"></div>
+                        <span id="warningCount">0 Warning</span>
+                    </div>
+                    <div class="status-indicator critical">
+                        <div class="status-dot" style="background: #f44336;"></div>
+                        <span id="criticalCount">0 Critical</span>
+                    </div>
+                </div>
+                <div class="connection-status">
+                    <div class="connection-dot" id="connectionDot"></div>
+                    <span id="connectionStatus">Waiting for data...</span>
+                    <span style="color: #ccc; margin-left: 10px;">Last Update: <span id="lastUpdate">Never</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid" id="dashboardGrid">
+            <!-- Cards will be dynamically generated based on input data -->
+        </div>
+
+        <!-- Output Section -->
+        <div class="output-section" id="outputSection" style="display: none;">
+            <div class="output-header">
+                <h4>⚠️ System Warnings</h4>
+                <button class="btn btn-danger btn-sm" onclick="clearAlerts()" style="padding: 4px 8px; font-size: 12px;">Clear</button>
+            </div>
+            <div class="output-content" id="outputContent">
+                <!-- Warning messages will appear here -->
+            </div>
+        </div>
+
+        <!-- Widget Settings Modal -->
+        <div id="configModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="modalTitle">Configure Monitoring</h2>
+                    <span class="close" onclick="closeModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="widget-settings">
+                        <div class="settings-header">
+                            <h3 class="settings-title">WIDGET SETTINGS</h3>
+                            <button class="close-settings" onclick="closeModal()">×</button>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label class="setting-label" id="parameterLabel">Voltage</label>
+                            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">No data available</div>
+                        </div>
+
+                        <div class="setting-item">
+                            <label class="setting-label">Values range:</label>
+                            <div class="range-inputs">
+                                <input type="number" class="range-input" id="minValue" placeholder="0" step="0.1">
+                                <span style="color: #94a3b8;">-</span>
+                                <input type="number" class="range-input" id="maxValue" placeholder="500" step="0.1">
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="condition-row">
+                                <input type="checkbox" class="condition-checkbox" id="showWarnings" checked>
+                                <span class="condition-text">Show warning(s)</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="condition-row">
+                                <input type="checkbox" class="condition-checkbox" id="showVariableName" checked>
+                                <span class="condition-text">Show variable name</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div style="margin-bottom: 10px; font-size: 14px; color: #f1f5f9;">Add Condition for Warning:</div>
+                            <div class="condition-row">
+                                <input type="checkbox" class="condition-checkbox" id="conditionEnabled">
+                                <span class="condition-text">If value is</span>
+                                <select class="condition-select" id="conditionOperator">
+                                    <option value=">">></option>
+                                    <option value="<"><</option>
+                                    <option value=">=">>=</option>
+                                    <option value="<="><=</option>
+                                    <option value="==">==</option>
+                                    <option value="!=">!=</option>
+                                </select>
+                                <input type="number" class="condition-input" id="conditionValue" placeholder="0" step="0.1">
+                                <button class="add-condition-btn" onclick="addCondition()" style="width: 30px; height: 30px; padding: 0; border-radius: 50%;">+</button>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <h3 style="color: #f1f5f9; margin-bottom: 10px; font-size: 16px;">Warning History</h3>
+                            <div class="alert-history" id="alertHistory">
+                                <!-- Warning history will be populated here -->
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="save-btn" onclick="saveConfiguration()">SAVE</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Section -->
+    <div id="notificationsSection" class="main-section">
+        <div class="header notifications-header">
+            <h1 class="logo">
+                System Notifications
+            </h1>
+            <div class="notifications-controls">
+                <button class="btn btn-primary" onclick="clearAllNotifications()">Clear All</button>
+                <div class="notifications-filter">
+                    <select id="notificationFilter" onchange="filterNotifications()">
+                        <option value="all">All Notifications</option>
+                        <option value="critical">Critical Only</option>
+                        <option value="warning">Warnings Only</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="notifications-stats">
+            <div class="stat-card critical-stat">
+                <div class="stat-icon">🚨</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalCritical">0</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+            </div>
+            <div class="stat-card warning-stat">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalWarnings">0</div>
+                    <div class="stat-label">Warnings</div>
+                </div>
+            </div>
+            <div class="stat-card resolved-stat">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalResolved">0</div>
+                    <div class="stat-label">Resolved</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="notifications-container" id="notificationsContainer">
+            <div class="no-notifications" id="noNotifications">
+                <div class="no-notifications-icon">🔔</div>
+                <div class="no-notifications-text">No notifications available</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
