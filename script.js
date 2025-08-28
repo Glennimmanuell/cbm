@@ -52,15 +52,15 @@ let connectingFrom = null;
 let dragOffset = { x: 0, y: 0 };
 let gridVisible = true;
 let lastCriticalSent = {};
-// Topic hashed dari Node-RED
+
 const TOPIC_METRICS  = "dd2d15b7eb993965d64d1aa35e51a369";
 const TOPIC_CRITICAL = "dc41fccec8dc3fb09f55cee7d731dcd7";
 
 mqttClient.on("connect", () => {
-    console.log("✅ Connected to HiveMQ broker");
+    console.log("Connected to HiveMQ broker");
 });
 mqttClient.on("error", (err) => {
-    console.error("❌ MQTT error:", err);
+    console.error("MQTT error:", err);
 });
 
 function resizeCanvas() {
@@ -569,9 +569,9 @@ function saveArchitectureData() {
         if (typeof(Storage) !== "undefined") {
             localStorage.setItem('bosch_rexroth_architecture_data', JSON.stringify(dataToSave));
         }
-        console.log('✅ Architecture data saved to memory.');
+        console.log('Architecture data saved to memory.');
     } catch (error) {
-        console.error('❌ Failed to save architecture data:', error);
+        console.error('Failed to save architecture data:', error);
     }
 }
 
@@ -583,12 +583,12 @@ function loadArchitectureData() {
                 const parsedData = JSON.parse(savedData);
                 components = parsedData.components || [];
                 connections = parsedData.connections || [];
-                console.log('✅ Architecture data loaded from memory.');
+                console.log('Architecture data loaded from memory.');
                 return true;
             }
         }
     } catch (error) {
-        console.error('❌ Failed to load architecture data:', error);
+        console.error('Failed to load architecture data:', error);
     }
     return false;
 }
@@ -625,9 +625,9 @@ function saveConfigurationToStorage() {
             localStorage.setItem(STORAGE_KEYS.ALERT_HISTORY, JSON.stringify(trimmedHistory));
         }
         
-        console.log('✅ Configuration saved to memory');
+        console.log('Configuration saved to memory');
     } catch (error) {
-        console.error('❌ Error saving configuration:', error);
+        console.error('Error saving configuration:', error);
     }
 }
 
@@ -667,10 +667,10 @@ function loadConfigurationFromStorage() {
             }
         }
         
-        console.log('✅ Configuration loaded from memory');
+        console.log('Configuration loaded from memory');
         return true;
     } catch (error) {
-        console.error('❌ Error loading configuration:', error);
+        console.error('Error loading configuration:', error);
         return false;
     }
 }
@@ -967,13 +967,13 @@ function generateAlert(item, oldStatus, newStatus, customMessage = null) {
         if (now - lastSent > 30000) {
             if (mqttClient && mqttClient.connected) {
                 mqttClient.publish(TOPIC_CRITICAL, JSON.stringify(alertMessage), { qos: 1 });
-                console.log("🚨 Critical alert published via MQTT:", alertMessage);
-                lastCriticalSent[item.id] = now; // update timestamp
+                console.log("Critical alert published via MQTT:", alertMessage);
+                lastCriticalSent[item.id] = now;
             } else {
-                console.error("❌ MQTT not connected, failed to send alert:", alertMessage);
+                console.error("MQTT not connected, failed to send alert:", alertMessage);
             }
         } else {
-            console.log("⏳ Critical alert suppressed to avoid spam:", item.name);
+            console.log("Critical alert suppressed to avoid spam:", item.name);
         }
     }
 
@@ -1170,7 +1170,7 @@ function exportAllConfiguration() {
 
         showNotification('All configuration exported successfully!', 'success');
     } catch (error) {
-        console.error('❌ Error exporting all configuration:', error);
+        console.error('Error exporting all configuration:', error);
         showNotification('Error exporting configuration', 'error');
     }
 }
@@ -1195,7 +1195,6 @@ function importAllConfiguration(file) {
                     updateConnections();
                 }
 
-                // restore cbm
                 if (importData.cbm) {
                     if (importData.cbm.parameterConfig) parameterConfig = importData.cbm.parameterConfig;
                     if (importData.cbm.globalSettings) {
@@ -1232,13 +1231,13 @@ function importAllConfiguration(file) {
 
                 showNotification('All configuration imported successfully!', 'success');
             } catch (parseError) {
-                console.error('❌ Error parsing import file:', parseError);
+                console.error('Error parsing import file:', parseError);
                 showNotification('Error parsing configuration file', 'error');
             }
         };
         reader.readAsText(file);
     } catch (error) {
-        console.error('❌ Error importing configuration:', error);
+        console.error('Error importing configuration:', error);
         showNotification('Error importing configuration', 'error');
     }
 }
@@ -1562,12 +1561,12 @@ function establishDataConnection() {
         const mqttClient = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
 
         mqttClient.on("connect", () => {
-            console.log("✅ Connected to HiveMQ broker");
+            console.log("Connected to HiveMQ broker");
             mqttClient.subscribe(TOPIC_METRICS, { qos: 1 }, (err) => {
                 if (err) {
-                    console.error("❌ Failed to subscribe:", err);
+                    console.error("Failed to subscribe:", err);
                 } else {
-                    console.log("📡 Subscribed");
+                    console.log("Subscribed");
                 }
             });
         });
@@ -1581,7 +1580,7 @@ function establishDataConnection() {
                     updateConnectionStatus(true);
                 }
             } catch (err) {
-                console.error("❌ Error parsing MQTT message:", err);
+                console.error("Error parsing MQTT message:", err);
             }
         });
 
