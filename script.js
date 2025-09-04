@@ -53,8 +53,11 @@ let dragOffset = { x: 0, y: 0 };
 let gridVisible = true;
 let lastCriticalSent = {};
 
+// const TOPIC_METRICS  = "dd2d15b7eb993965d64d1aa35e51a369";
+// const TOPIC_CRITICAL = "dc41fccec8dc3fb09f55cee7d731dcd7";
+
 const TOPIC_METRICS  = "dd2d15b7eb993965d64d1aa35e51a369";
-const TOPIC_CRITICAL = "dc41fccec8dc3fb09f55cee7d731dcd7";
+const TOPIC_CRITICAL = "topic/critical";
 
 mqttClient.on("connect", () => {
     console.log("Connected to HiveMQ broker");
@@ -768,6 +771,13 @@ function updateItemStatus(item) {
     var previousStatus = item.status;
     var newStatus = 'normal';
 
+    // ✅ Tambahkan pengecekan anti duplikasi
+    if (item.lastValue !== undefined && item.value === item.lastValue && 
+        (item.status === 'warning' || item.status === 'critical')) {
+        return; // skip duplicate warning/critical jika value sama
+    }
+    item.lastValue = item.value; // simpan nilai terakhir
+
     let isWarning = false;
     if (item.value < item.min || item.value > item.max) {
         isWarning = true;
@@ -800,8 +810,9 @@ function updateItemStatus(item) {
         }
         warningCounts[item.id]++;
 
-        if (warningCounts[item.id] % 20 === 0) {
+        if (warningCounts[item.id] >= criticalThreshold) {
             triggerCriticalAlert(item);
+            warningCounts[item.id] = 0; // reset setelah critical
         } else {
             if (item.status !== 'critical') {
                 item.status = 'warning';
@@ -833,7 +844,6 @@ function updateItemStatus(item) {
         }
     }
 }
-
 
 function evaluateCondition(value, operator, threshold) {
     switch (operator) {
