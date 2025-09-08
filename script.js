@@ -2,9 +2,11 @@ function showArchitecture() {
     document.getElementById('architectureSection').classList.add('active');
     document.getElementById('monitoringSection').classList.remove('active');
     document.getElementById('notificationsSection').classList.remove('active');
-    document.querySelectorAll('.nav-btn')[0].classList.add('active');
-    document.querySelectorAll('.nav-btn')[1].classList.remove('active');
-    document.querySelectorAll('.nav-btn')[2].classList.remove('active');
+    document.getElementById('historySection').classList.remove('active');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const archBtn = document.querySelector('.nav-btn[onclick*="showArchitecture"]') || document.querySelectorAll('.nav-btn')[0];
+    if (archBtn) archBtn.classList.add('active');
     
     setTimeout(() => {
         resizeCanvas();
@@ -15,9 +17,11 @@ function showMonitoring() {
     document.getElementById('architectureSection').classList.remove('active');
     document.getElementById('monitoringSection').classList.add('active');
     document.getElementById('notificationsSection').classList.remove('active');
-    document.querySelectorAll('.nav-btn')[0].classList.remove('active');
-    document.querySelectorAll('.nav-btn')[1].classList.add('active');
-    document.querySelectorAll('.nav-btn')[2].classList.remove('active');
+    document.getElementById('historySection').classList.remove('active');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const monBtn = document.querySelector('.nav-btn[onclick*="showMonitoring"]') || document.querySelectorAll('.nav-btn')[1];
+    if (monBtn) monBtn.classList.add('active');
     
     setTimeout(() => {
         initializeDashboard();
@@ -29,9 +33,11 @@ function showNotifications() {
     document.getElementById('architectureSection').classList.remove('active');
     document.getElementById('monitoringSection').classList.remove('active');
     document.getElementById('notificationsSection').classList.add('active');
-    document.querySelectorAll('.nav-btn')[0].classList.remove('active');
-    document.querySelectorAll('.nav-btn')[1].classList.remove('active');
-    document.querySelectorAll('.nav-btn')[2].classList.add('active');
+    document.getElementById('historySection').classList.remove('active');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const notifBtn = document.querySelector('.nav-btn[onclick*="showNotifications"]') || document.querySelectorAll('.nav-btn')[2];
+    if (notifBtn) notifBtn.classList.add('active');
     
     setTimeout(() => {
         renderNotifications();
@@ -52,11 +58,9 @@ let connectingFrom = null;
 let dragOffset = { x: 0, y: 0 };
 let gridVisible = true;
 let lastCriticalSent = {};
+let ruleAlertCounters = {}; 
 
-// const TOPIC_METRICS  = "dd2d15b7eb993965d64d1aa35e51a369";
-// const TOPIC_CRITICAL = "dc41fccec8dc3fb09f55cee7d731dcd7";
-
-const TOPIC_METRICS  = "dd2d15b7eb993965d64d1aa35e51a369";
+const TOPIC_METRICS = "dd2d15b7eb993965d64d1aa35e51a369";
 const TOPIC_CRITICAL = "topic/critical";
 
 mqttClient.on("connect", () => {
@@ -74,10 +78,10 @@ function resizeCanvas() {
 }
 
 const componentIcons = {
-    'Sensor': '📡', 'Actuator': '⚙️', 'Motor': '🔧',
-    'PLC': '🏭', 'HMI': '🖥️', 'Safety': '🛡️',
-    'Gateway': '🌐', 'Switch': '🔌', 'Router': '📶',
-    'Cloud': '☁️', 'Analytics': '📊', 'Dashboard': '📈'
+    'Sensor': 'ðŸ“¡', 'Actuator': 'âš™ï¸', 'Motor': 'ðŸ”§',
+    'PLC': 'ðŸ­', 'HMI': 'ðŸ–¥ï¸', 'Safety': 'ðŸ›¡ï¸',
+    'Gateway': 'ðŸŒ', 'Switch': 'ðŸ”Œ', 'Router': 'ðŸ“¶',
+    'Cloud': 'â˜ï¸', 'Analytics': 'ðŸ“Š', 'Dashboard': 'ðŸ“ˆ'
 };
 
 const componentColors = {
@@ -421,10 +425,6 @@ function updateConnections() {
         }
         });
 
-        polyline.addEventListener("click", () => {
-        showWaypointHandles(conn);
-        });
-
         const clickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         clickLine.setAttribute('x1', fromPos.x);
         clickLine.setAttribute('y1', fromPos.y);
@@ -496,71 +496,29 @@ function clearCanvas() {
     }
 }
 
+// New Global Settings System
 var parameterConfig = {
-    'Speed': {
-        icon: '⚡',
-        unit: 'RPM',
-        min: 0,
-        max: 3000,
-        warningConditions: []
-    },
-    'Frequency': {
-        icon: '🔄',
-        unit: 'Hz',
-        min: 0,
-        max: 100,
-        warningConditions: []
-    },
-    'DC Bus Voltage': {
-        icon: '⚡',
-        unit: 'V',
-        min: 0,
-        max: 600,
-        warningConditions: []
-    },
-    'Output Current': {
-        icon: '🔌',
-        unit: 'A',
-        min: 0,
-        max: 50,
-        warningConditions: []
-    },
-    'Output Voltage': {
-        icon: '⚡',
-        unit: 'V',
-        min: 0,
-        max: 500,
-        warningConditions: []
-    },
-    'Temperature': {
-        icon: '🌡️',
-        unit: '°C',
-        min: 0,
-        max: 150,
-        warningConditions: []
-    }
+    'Speed': { icon: 'âš¡', unit: 'RPM', min: 0, max: 3000 },
+    'Frequency': { icon: 'ðŸ”„', unit: 'Hz', min: 0, max: 100 },
+    'DC Bus Voltage': { icon: 'âš¡', unit: 'V', min: 0, max: 600 },
+    'Output Current': { icon: 'ðŸ”Œ', unit: 'A', min: 0, max: 50 },
+    'Output Voltage': { icon: 'âš¡', unit: 'V', min: 0, max: 500 },
+    'Temperature': { icon: 'ðŸŒ¡ï¸', unit: 'Â°C', min: 0, max: 150 }
 };
 
 var monitoringData = [];
-var currentConfigId = null;
-var alertHistory = {};
-var autoProcess = false;
+var globalThresholdRules = [];
+var globalCriticalThresholds = [];
+var allNotifications = [];
 var lastDataTimestamp = null;
 var outputMessages = [];
-var showWarnings = true;
-var showVariableName = true;
-
-var allNotifications = [];
-var warningCounts = {};
-var criticalThreshold = 30;
 
 const STORAGE_KEYS = {
     PARAMETER_CONFIG: 'cbm_parameter_config',
     MONITORING_DATA: 'cbm_monitoring_data',
-    ALERT_HISTORY: 'cbm_alert_history',
-    GLOBAL_SETTINGS: 'cbm_global_settings',
-    NOTIFICATIONS: 'cbm_notifications',
-    WARNING_COUNTS: 'cbm_warning_counts'
+    GLOBAL_THRESHOLD_RULES: 'cbm_global_threshold_rules',
+    GLOBAL_CRITICAL_THRESHOLDS: 'cbm_global_critical_thresholds',
+    NOTIFICATIONS: 'cbm_notifications'
 };
 
 function saveArchitectureData() {
@@ -569,10 +527,8 @@ function saveArchitectureData() {
             components: components,
             connections: connections
         };
-        if (typeof(Storage) !== "undefined") {
-            localStorage.setItem('bosch_rexroth_architecture_data', JSON.stringify(dataToSave));
-        }
-        console.log('Architecture data saved to memory.');
+        localStorage.setItem('cbm_architecture', JSON.stringify(dataToSave));
+        console.log('Architecture data saved to localStorage');
     } catch (error) {
         console.error('Failed to save architecture data:', error);
     }
@@ -580,15 +536,13 @@ function saveArchitectureData() {
 
 function loadArchitectureData() {
     try {
-        if (typeof(Storage) !== "undefined") {
-            const savedData = localStorage.getItem('bosch_rexroth_architecture_data');
-            if (savedData) {
-                const parsedData = JSON.parse(savedData);
-                components = parsedData.components || [];
-                connections = parsedData.connections || [];
-                console.log('Architecture data loaded from memory.');
-                return true;
-            }
+        const saved = localStorage.getItem('cbm_architecture');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            components = parsed.components || [];
+            connections = parsed.connections || [];
+            console.log('Architecture data loaded from localStorage');
+            return true;
         }
     } catch (error) {
         console.error('Failed to load architecture data:', error);
@@ -598,37 +552,15 @@ function loadArchitectureData() {
 
 function saveConfigurationToStorage() {
     try {
-        if (typeof(Storage) !== "undefined") {
-            localStorage.setItem(STORAGE_KEYS.PARAMETER_CONFIG, JSON.stringify(parameterConfig));
-            
-            const configData = monitoringData.map(item => ({
-                id: item.id,
-                name: item.name,
-                icon: item.icon,
-                unit: item.unit,
-                min: item.min,
-                max: item.max,
-                warningConditions: item.warningConditions
-            }));
-            localStorage.setItem(STORAGE_KEYS.MONITORING_DATA, JSON.stringify(configData));
-            
-            const globalSettings = {
-                showWarnings: showWarnings,
-                showVariableName: showVariableName
-            };
-            localStorage.setItem(STORAGE_KEYS.GLOBAL_SETTINGS, JSON.stringify(globalSettings));
-            
-            localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifications.slice(0, 1000))); // Keep last 1000
-            localStorage.setItem(STORAGE_KEYS.WARNING_COUNTS, JSON.stringify(warningCounts));
-            
-            const trimmedHistory = {};
-            Object.keys(alertHistory).forEach(key => {
-                trimmedHistory[key] = alertHistory[key].slice(0, 100);
-            });
-            localStorage.setItem(STORAGE_KEYS.ALERT_HISTORY, JSON.stringify(trimmedHistory));
-        }
-        
-        console.log('Configuration saved to memory');
+        const config = {
+            parameterConfig: parameterConfig,
+            monitoringData: monitoringData,
+            globalThresholdRules: globalThresholdRules,
+            globalCriticalThresholds: globalCriticalThresholds,
+            allNotifications: allNotifications
+        };
+        localStorage.setItem(STORAGE_KEYS.PARAMETER_CONFIG, JSON.stringify(config));
+        console.log('Configuration saved to localStorage');
     } catch (error) {
         console.error('Error saving configuration:', error);
     }
@@ -636,117 +568,31 @@ function saveConfigurationToStorage() {
 
 function loadConfigurationFromStorage() {
     try {
-        if (typeof(Storage) !== "undefined") {
-            const savedParameterConfig = localStorage.getItem(STORAGE_KEYS.PARAMETER_CONFIG);
-            if (savedParameterConfig) {
-                const loadedConfig = JSON.parse(savedParameterConfig);
-                Object.keys(parameterConfig).forEach(key => {
-                    if (loadedConfig[key]) {
-                        parameterConfig[key] = { ...parameterConfig[key], ...loadedConfig[key] };
-                    }
-                });
-            }
-            
-            const savedGlobalSettings = localStorage.getItem(STORAGE_KEYS.GLOBAL_SETTINGS);
-            if (savedGlobalSettings) {
-                const settings = JSON.parse(savedGlobalSettings);
-                showWarnings = settings.showWarnings !== undefined ? settings.showWarnings : true;
-                showVariableName = settings.showVariableName !== undefined ? settings.showVariableName : true;
-            }
-            
-            const savedNotifications = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-            if (savedNotifications) {
-                allNotifications = JSON.parse(savedNotifications);
-            }
-            
-            const savedWarningCounts = localStorage.getItem(STORAGE_KEYS.WARNING_COUNTS);
-            if (savedWarningCounts) {
-                warningCounts = JSON.parse(savedWarningCounts);
-            }
-            
-            const savedAlertHistory = localStorage.getItem(STORAGE_KEYS.ALERT_HISTORY);
-            if (savedAlertHistory) {
-                alertHistory = JSON.parse(savedAlertHistory);
-            }
+        const saved = localStorage.getItem(STORAGE_KEYS.PARAMETER_CONFIG);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            parameterConfig = parsed.parameterConfig || parameterConfig;
+            monitoringData = parsed.monitoringData || monitoringData;
+            globalThresholdRules = parsed.globalThresholdRules || [];
+            globalCriticalThresholds = parsed.globalCriticalThresholds || [];
+            allNotifications = parsed.allNotifications || [];
+            console.log('Configuration loaded from localStorage');
+            return true;
         }
-        
-        console.log('Configuration loaded from memory');
-        return true;
     } catch (error) {
         console.error('Error loading configuration:', error);
-        return false;
     }
+    return false;
 }
+
 
 function initializeDashboard() {
     loadConfigurationFromStorage();
-    if (monitoringData.length === 0) {
-        initializeDefaultMonitoringData();
-    }
     updateStatusCounts();
 
     setInterval(function() {
-        if (autoProcess) {
-            // Not relevant for real-time data layer connection
-        }
         checkDataFreshness();
     }, 2000);
-}
-
-function updateMonitoringData(data) {
-    if (monitoringData.length === 0) {
-        if (typeof(Storage) !== "undefined") {
-            const savedMonitoringData = localStorage.getItem(STORAGE_KEYS.MONITORING_DATA);
-            
-            if (savedMonitoringData) {
-                try {
-                    const loadedData = JSON.parse(savedMonitoringData);
-                    loadedData.forEach(savedItem => {
-                        const config = parameterConfig[savedItem.id] || parameterConfig[savedItem.name];
-                        monitoringData.push({
-                            id: savedItem.id,
-                            name: savedItem.name,
-                            icon: savedItem.icon || (config && config.icon) || '📊',
-                            value: 0,
-                            unit: savedItem.unit || (config && config.unit) || '',
-                            min: savedItem.min !== undefined ? savedItem.min : (config && config.min) || 0,
-                            max: savedItem.max !== undefined ? savedItem.max : (config && config.max) || 100,
-                            warningConditions: savedItem.warningConditions || [],
-                            status: 'normal',
-                            history: []
-                        });
-                    });
-                } catch (error) {
-                    console.error('Error loading saved monitoring data:', error);
-                    initializeDefaultMonitoringData();
-                }
-            } else {
-                initializeDefaultMonitoringData();
-            }
-        } else {
-            initializeDefaultMonitoringData();
-        }
-    }
-
-    Object.keys(data).forEach(function(key) {
-        if (key !== 'timestamp') {
-            var existingParam = monitoringData.find(function(item) {
-                return item.id === key;
-            });
-
-            if (existingParam) {
-                var newValue = parseFloat(data[key]);
-                existingParam.value = newValue;
-                existingParam.history.push(newValue);
-
-                if (existingParam.history.length > 10) {
-                    existingParam.history.shift();
-                }
-
-                updateItemStatus(existingParam);
-            }
-        }
-    });
 }
 
 function initializeDefaultMonitoringData() {
@@ -760,89 +606,123 @@ function initializeDefaultMonitoringData() {
             unit: config.unit,
             min: config.min,
             max: config.max,
-            warningConditions: config.warningConditions || [],
             status: 'normal',
             history: []
         });
     });
 }
 
+function updateMonitoringData(data) {
+    Object.keys(data).forEach(function(key) {
+        if (key !== 'timestamp') {
+            let existingParam = monitoringData.find(item => item.id === key);
+
+            if (!existingParam) {
+                monitoringData.push({
+                    id: key,
+                    name: key,
+                    icon: '📊',
+                    value: 0,
+                    unit: '',
+                    min: 0,
+                    max: 100,
+                    status: 'normal',
+                    history: []
+                });
+                existingParam = monitoringData.find(item => item.id === key);
+            }
+
+            var newValue = parseFloat(data[key]);
+            existingParam.value = newValue;
+
+            // ⬇️ selalu simpan history biar grafik muncul
+            existingParam.history.push(newValue);
+            if (existingParam.history.length > 10) {
+                existingParam.history.shift();
+            }
+
+            // ⬇️ update status tetap jalan
+            updateItemStatus(existingParam);
+        }
+    });
+
+    populateDataSelectors();
+}
+
 function updateItemStatus(item) {
     var previousStatus = item.status;
-    var newStatus = 'normal';
-
-    // ✅ Tambahkan pengecekan anti duplikasi
-    if (item.lastValue !== undefined && item.value === item.lastValue && 
-        (item.status === 'warning' || item.status === 'critical')) {
-        return; // skip duplicate warning/critical jika value sama
-    }
-    item.lastValue = item.value; // simpan nilai terakhir
-
-    let isWarning = false;
-    if (item.value < item.min || item.value > item.max) {
-        isWarning = true;
-    } else if (item.warningConditions && item.warningConditions.length > 0) {
-        for (var i = 0; i < item.warningConditions.length; i++) {
-            var condition = item.warningConditions[i];
-            if (evaluateCondition(item.value, condition.operator, condition.value)) {
-                isWarning = true;
-                break;
-            }
-        }
-    }
+    item.status = 'normal'; // Default to blue/normal
     
-    if (isWarning) {
-        const warningNotification = {
-            id: Date.now() + Math.random(),
-            timestamp: new Date().toISOString(),
-            type: 'warning',
-            parameter: item.name,
-            value: item.value,
-            unit: item.unit,
-            message: `${item.name} masih dalam kondisi warning: ${item.value}${item.unit}`,
-            status: 'active',
-            severity: 'warning'
-        };
-        addNotification(warningNotification);
-
-        if (!warningCounts[item.id]) {
-            warningCounts[item.id] = 0;
-        }
-        warningCounts[item.id]++;
-
-        if (warningCounts[item.id] >= criticalThreshold) {
-            triggerCriticalAlert(item);
-            warningCounts[item.id] = 0; // reset setelah critical
-        } else {
-            if (item.status !== 'critical') {
-                item.status = 'warning';
+    // Check global threshold rules
+    globalThresholdRules.forEach(function(rule) {
+        if (evaluateGlobalRule(rule)) {
+            // Only apply color to parameters that are part of this specific rule
+            if (item.id === rule.data1 || item.id === rule.data2) {
+                if (rule.color === 'green') {
+                    item.status = 'success';
+                } else if (rule.color === 'yellow') {
+                    item.status = 'alert';
+                    generateAlert(item, previousStatus, 'alert', rule.message);
+                    
+                    const alertNotification = {
+                        id: Date.now() + Math.random(),
+                        timestamp: new Date().toISOString(),
+                        type: 'alert',
+                        parameter: item.name,
+                        value: item.value,
+                        unit: item.unit,
+                        message: rule.message,
+                        status: 'active',
+                        severity: 'warning'
+                    };
+                    addNotification(alertNotification);
+                } else if (rule.color === 'red') {
+                    item.status = 'critical';
+                    generateAlert(item, previousStatus, 'critical', rule.message);
+                    
+                    const criticalNotification = {
+                        id: Date.now() + Math.random(),
+                        timestamp: new Date().toISOString(),
+                        type: 'critical',
+                        parameter: 'System',
+                        value: '',
+                        unit: '',
+                        message: rule.message,
+                        status: 'active',
+                        severity: 'critical'
+                    };
+                    addNotification(criticalNotification);
+                }
             }
         }
-
-    } else {
-        if (previousStatus === 'warning' || previousStatus === 'critical') {
-            handleWarningResolution(item);
+    });
+    
+    // Check critical thresholds (only for individual parameters)
+    globalCriticalThresholds.forEach(function(threshold) {
+        if (threshold.parameter === item.id && item.value >= threshold.value) {
+            item.status = 'critical';
+            generateAlert(item, previousStatus, 'critical', `${item.name} reached critical threshold: ${item.value}${item.unit}`);
         }
-        item.status = 'normal';
+    });
+}
+
+function evaluateGlobalRule(rule) {
+    var data1 = monitoringData.find(item => item.id === rule.data1);
+    var data2 = monitoringData.find(item => item.id === rule.data2);
+    
+    if (!data1 || !data2) return false;
+    
+    var condition1 = evaluateCondition(data1.value, rule.operator1, rule.value1);
+    var condition2 = evaluateCondition(data2.value, rule.operator2, rule.value2);
+
+    if (rule.logicalOperator === 'AND') {
+        return condition1 && condition2;
+    } else if (rule.logicalOperator === 'OR') {
+        return condition1 || condition2;
+    } else if (rule.logicalOperator === 'EQUAL') {
+        return condition1 === condition2;
     }
-
-    if (item.status !== previousStatus) {
-        generateAlert(item, previousStatus, item.status);
-        if (!alertHistory[item.id]) {
-            alertHistory[item.id] = [];
-        }
-        alertHistory[item.id].unshift({
-            time: new Date().toLocaleTimeString(),
-            message: 'Status changed from ' + previousStatus + ' to ' + item.status +
-                ' (Value: ' + item.value + item.unit + ')',
-            oldStatus: previousStatus,
-            newStatus: item.status
-        });
-
-        if (alertHistory[item.id].length > 20) {
-            alertHistory[item.id] = alertHistory[item.id].slice(0, 20);
-        }
-    }
+    return false;
 }
 
 function evaluateCondition(value, operator, threshold) {
@@ -857,105 +737,322 @@ function evaluateCondition(value, operator, threshold) {
     }
 }
 
-function handleWarning(item) {
-    if (!warningCounts[item.id]) {
-        warningCounts[item.id] = 0;
-    }
-    warningCounts[item.id]++;
+function openGlobalSettings() {
+    const modal = document.getElementById('globalSettingsModal');
+    if (!modal) return;
     
-    const warningNotification = {
-        id: Date.now() + Math.random(),
-        timestamp: new Date().toISOString(),
-        type: 'warning',
-        parameter: item.name,
-        value: item.value,
-        unit: item.unit,
-        message: `${item.name} warning: ${item.value}${item.unit}`,
-        status: 'active',
-        severity: 'warning'
-    };
-    addNotification(warningNotification);
+    // Populate data selectors
+    populateDataSelectors();
+    renderThresholdRules();
+    renderCriticalSettings();
     
-    if (warningCounts[item.id] >= criticalThreshold) {
-        triggerCriticalAlert(item);
-        warningCounts[item.id] = 0;
-    }
-    
-    generateAlert(item, 'normal', 'warning');
+    modal.style.display = 'block';
 }
 
-function handleWarningResolution(item) {
-    if (warningCounts[item.id]) {
-        warningCounts[item.id] = 0;
+function closeGlobalSettings() {
+    const modal = document.getElementById('globalSettingsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function populateDataSelectors() {
+    const selectors = ['newRuleData1', 'newRuleData2', 'newCriticalData'];
+    selectors.forEach(selectorId => {
+        const selector = document.getElementById(selectorId);
+        if (selector) {
+            selector.innerHTML = '<option value="">Select Parameter</option>';
+            monitoringData.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                selector.appendChild(option);
+            });
+        }
+    });
+}
+
+function addThresholdRule() {
+    const data1 = document.getElementById('newRuleData1').value;
+    const operator1 = document.getElementById('newRuleOperator1').value;
+    const value1 = parseFloat(document.getElementById('newRuleValue1').value);
+    const logicalOperatorEl = document.getElementById('newRuleLogicalOperator');
+    const logicalOperator = logicalOperatorEl ? logicalOperatorEl.value : 'AND';
+    const data2 = document.getElementById('newRuleData2').value;
+    const operator2 = document.getElementById('newRuleOperator2').value;
+    const value2 = parseFloat(document.getElementById('newRuleValue2').value);
+    const message = document.getElementById('newRuleMessage').value;
+    const color = document.getElementById('newRuleColor').value;
+
+    if (!data1 || !data2 || isNaN(value1) || isNaN(value2) || !message) {
+        showNotification('Please fill all fields for the threshold rule', 'error');
+        return;
+    }
+
+    const newRule = {
+        id: Date.now() + Math.random(),
+        data1, operator1, value1,
+        data2, operator2, value2,
+        logicalOperator,
+        message, color
+    };
+
+    // simpan rule
+    globalThresholdRules.push(newRule);
+
+    // buat derived critical threshold yang mengacu ke rule ini
+    const derivedCritical = {
+        id: Date.now() + Math.random(),
+        isFromRule: true,
+        ruleId: newRule.id
+    };
+    globalCriticalThresholds.push(derivedCritical);
+
+    // re-render UI terkait
+    renderThresholdRules();
+    renderCriticalSettings();
+
+    // bersihkan form
+    document.getElementById('newRuleData1').value = '';
+    document.getElementById('newRuleValue1').value = '';
+    document.getElementById('newRuleData2').value = '';
+    document.getElementById('newRuleValue2').value = '';
+    document.getElementById('newRuleMessage').value = '';
+
+    saveConfigurationToStorage();
+    showNotification('Threshold rule added successfully!', 'success');
+}
+
+function addCriticalThreshold() {
+    const parameter = document.getElementById('newCriticalData').value;
+    const value = parseFloat(document.getElementById('newCriticalValue').value);
+    
+    if (!parameter || isNaN(value)) {
+        showNotification('Please select parameter and enter valid value', 'error');
+        return;
     }
     
-    const resolutionNotification = {
+    const newThreshold = {
         id: Date.now() + Math.random(),
-        timestamp: new Date().toISOString(),
-        type: 'info',
-        parameter: item.name,
-        value: item.value,
-        unit: item.unit,
-        message: `${item.name} returned to normal: ${item.value}${item.unit}`,
-        status: 'resolved',
-        severity: 'info'
+        parameter,
+        value
     };
     
-    addNotification(resolutionNotification);
-}
-
-function triggerCriticalAlert(item) {
-    const oldStatus = item.status;
-    item.status = 'critical';
-
-    const criticalMessage = "⚠️ " + item.name + " sudah bermasalah terus-menerus, segera lakukan pemeriksaan!";
-
-    generateAlert(item, oldStatus, 'critical', criticalMessage);
-
-    const criticalNotification = {
-        id: Date.now() + Math.random(),
-        timestamp: new Date().toISOString(),
-        type: 'critical',
-        parameter: item.name,
-        value: item.value,
-        unit: item.unit,
-        message: criticalMessage,
-        status: 'active',
-        severity: 'critical'
-    };
-    addNotification(criticalNotification);
-}
-
-function generateCriticalMessage(item) {
-    const parameterName = item.name.toLowerCase();
+    globalCriticalThresholds.push(newThreshold);
+    renderCriticalSettings();
     
-    if (parameterName.includes('speed') || parameterName.includes('rpm')) {
-        return `Kecepatan pada motor sudah bermasalah secara terus menerus. Segera lakukan pemeriksaan sistem drive motor.`;
-    } else if (parameterName.includes('temperature') || parameterName.includes('temp')) {
-        return `Suhu sistem sudah bermasalah secara terus menerus. Segera lakukan pemeriksaan sistem pendingin.`;
-    } else if (parameterName.includes('voltage') || parameterName.includes('volt')) {
-        return `Tegangan sistem sudah bermasalah secara terus menerus. Segera lakukan pemeriksaan suplai listrik.`;
-    } else if (parameterName.includes('current') || parameterName.includes('ampere')) {
-        return `Arus sistem sudah bermasalah secara terus menerus. Segera lakukan pemeriksaan beban sistem.`;
-    } else if (parameterName.includes('frequency') || parameterName.includes('freq')) {
-        return `Frekuensi sistem sudah bermasalah secara terus menerus. Segera lakukan pemeriksaan kontrol frekuensi.`;
+    // Clear form
+    document.getElementById('newCriticalData').value = '';
+    document.getElementById('newCriticalValue').value = '';
+    
+    saveConfigurationToStorage();
+    showNotification('Critical threshold added successfully!', 'success');
+}
+
+function renderThresholdRules() {
+    const container = document.getElementById('thresholdRules');
+    if (!container) return;
+
+    if (globalThresholdRules.length === 0) {
+        container.innerHTML = '<div class="no-rules">No threshold rules configured</div>';
+        return;
+    }
+
+    container.innerHTML = globalThresholdRules.map(rule => {
+        const data1Name = monitoringData.find(d => d.id === rule.data1)?.name || rule.data1;
+        const data2Name = monitoringData.find(d => d.id === rule.data2)?.name || rule.data2;
+        const logical = rule.logicalOperator || 'AND';
+
+        return `
+            <div class="rule-item">
+                <div class="rule-condition">
+                    <strong>${data1Name}</strong> ${rule.operator1} ${rule.value1}
+                    ${logical} <strong>${data2Name}</strong> ${rule.operator2} ${rule.value2}
+                </div>
+                <div class="rule-message">Message: "${rule.message}"</div>
+                <div class="rule-color">Color: <span class="color-badge ${rule.color}">${rule.color}</span></div>
+                <button class="btn btn-danger btn-sm" onclick="removeThresholdRule('${rule.id}')">Remove</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderCriticalSettings() {
+    const container = document.getElementById('criticalSettings');
+    if (!container) return;
+
+    const items = [];
+
+    // tampilkan derived thresholds dari rules
+    const derived = globalCriticalThresholds.filter(th => th.isFromRule);
+    derived.forEach(threshold => {
+        const rule = globalThresholdRules.find(r => r.id === threshold.ruleId);
+        if (!rule) return;
+
+        const data1Name = monitoringData.find(d => d.id === rule.data1)?.name || rule.data1;
+        const data2Name = monitoringData.find(d => d.id === rule.data2)?.name || rule.data2;
+        const logical = rule.logicalOperator || 'AND';
+        const conditionText = `${data1Name} ${rule.operator1} ${rule.value1} ${logical} ${data2Name} ${rule.operator2} ${rule.value2}`;
+        const isTriggered = evaluateGlobalRule(rule);
+
+        // pakai threshold.value kalau ada, default kosong
+        const critVal = threshold.value !== undefined ? threshold.value : "";
+
+        items.push(`
+            <div class="critical-item ${isTriggered ? 'triggered' : ''}">
+                <div class="critical-condition">
+                    <strong>${rule.message}</strong>
+                    <div class="threshold-condition">Rule: ${conditionText}</div>
+                    <div class="threshold-status">Status: ${isTriggered ? 'TRIGGERED' : 'Normal'}</div>
+                    <div class="threshold-input">
+                        <label>Critical Value:</label>
+                        <input type="number" step="0.1" value="${critVal}" 
+                            onchange="updateCriticalValue('${threshold.id}', this.value)">
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="removeCriticalThreshold('${threshold.id}')">Remove</button>
+            </div>
+        `);
+    });
+
+    // tampilkan manual critical thresholds
+    const manual = globalCriticalThresholds.filter(th => !th.isFromRule);
+    manual.forEach(threshold => {
+        const paramName = monitoringData.find(d => d.id === threshold.parameter)?.name || threshold.parameter;
+        const critVal = threshold.value !== undefined ? threshold.value : "";
+
+        items.push(`
+            <div class="critical-item">
+                <div class="critical-condition">
+                    <strong>${paramName}</strong>
+                    <div class="threshold-input">
+                        <label>Critical Value:</label>
+                        <input type="number" step="0.1" value="${critVal}" 
+                            onchange="updateCriticalValue('${threshold.id}', this.value)">
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="removeCriticalThreshold('${threshold.id}')">Remove</button>
+            </div>
+        `);
+    });
+
+    if (items.length === 0) {
+        container.innerHTML = '<div class="no-settings">No critical thresholds configured</div>';
     } else {
-        return `Parameter ${item.name} sudah bermasalah secara terus menerus. Segera lakukan pemeriksaan sistem.`;
+        container.innerHTML = items.join('');
     }
+}
+
+function updateCriticalValue(thresholdId, newValue) {
+    const idToUpdate = (typeof thresholdId === 'string') ? parseFloat(thresholdId) : thresholdId;
+    const threshold = globalCriticalThresholds.find(th => th.id === idToUpdate);
+    if (!threshold) return;
+
+    threshold.value = parseFloat(newValue);
+
+    saveConfigurationToStorage();
+    showNotification('Critical threshold value updated', 'success');
+}   
+
+function removeThresholdRule(ruleId) {
+    const idToRemove = (typeof ruleId === 'string') ? parseFloat(ruleId) : ruleId;
+    if (isNaN(idToRemove)) {
+        showNotification('Invalid rule id', 'error');
+        return;
+    }
+
+    // hapus rule
+    globalThresholdRules = globalThresholdRules.filter(rule => rule.id !== idToRemove);
+
+    // hapus derived critical thresholds yang terkait
+    globalCriticalThresholds = globalCriticalThresholds.filter(th => !(th.isFromRule && th.ruleId === idToRemove));
+
+    renderThresholdRules();
+    renderCriticalSettings();
+    saveConfigurationToStorage();
+    showNotification('Threshold rule removed', 'info');
+}
+
+function removeCriticalThreshold(thresholdId) {
+    const idToRemove = (typeof thresholdId === 'string') ? parseFloat(thresholdId) : thresholdId;
+    if (isNaN(idToRemove)) {
+        showNotification('Invalid threshold id', 'error');
+        return;
+    }
+
+    const threshold = globalCriticalThresholds.find(th => th.id === idToRemove);
+    if (!threshold) return;
+
+    // jika derived dari rule, hapus rule juga
+    if (threshold.isFromRule && threshold.ruleId) {
+        globalThresholdRules = globalThresholdRules.filter(r => r.id !== threshold.ruleId);
+    }
+
+    // hapus threshold
+    globalCriticalThresholds = globalCriticalThresholds.filter(th => th.id !== idToRemove);
+
+    renderThresholdRules();
+    renderCriticalSettings();
+    saveConfigurationToStorage();
+    showNotification('Critical threshold removed', 'info');
 }
 
 function addNotification(notification) {
+    const now = Date.now();
+
+    // 🔒 Cegah duplikat (pesan sama dalam 2 detik terakhir)
+    const isDuplicate = allNotifications.some(n =>
+        n.message === notification.message &&
+        Math.abs(new Date(n.timestamp).getTime() - now) < 2000
+    );
+    if (isDuplicate) return;
+
+    // 📊 kalau notifikasi tipe alert, tambahkan counter
+    if (notification.type === 'alert') {
+        const ruleKey = notification.message; 
+        if (!ruleAlertCounters[ruleKey]) {
+            ruleAlertCounters[ruleKey] = 0;
+        }
+        ruleAlertCounters[ruleKey]++;
+
+        // cari critical threshold yg terkait rule/message
+        const derivedThreshold = globalCriticalThresholds.find(th => 
+            (th.isFromRule && th.ruleId) || 
+            (!th.isFromRule && th.parameter === notification.parameter)
+        );
+
+        let critVal = derivedThreshold && derivedThreshold.value ? derivedThreshold.value : 0;
+
+        // kalau sudah mencapai critical value, upgrade jadi critical
+        if (critVal > 0 && ruleAlertCounters[ruleKey] >= critVal) {
+            notification.type = 'critical';
+            notification.severity = 'critical';
+            notification.status = 'active';
+
+            // publish langsung ke MQTT broker
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(TOPIC_CRITICAL, JSON.stringify(notification), { qos: 1 });
+                console.log("Critical alert published via MQTT (from counter):", notification);
+            } else {
+                console.error("MQTT not connected, failed to publish critical alert:", notification);
+            }
+
+            // reset counter supaya tiap kelipatan (5,10,15 dst) naik critical
+            ruleAlertCounters[ruleKey] = 0;
+        }
+    }
+
     allNotifications.unshift(notification);
-    
+
     if (allNotifications.length > 1000) {
         allNotifications = allNotifications.slice(0, 1000);
     }
-    
+
     updateNotificationStats();
     if (document.getElementById('notificationsSection').classList.contains('active')) {
         renderNotifications();
     }
-    
+
     saveConfigurationToStorage();
 }
 
@@ -974,16 +1071,12 @@ function generateAlert(item, oldStatus, newStatus, customMessage = null) {
     if (newStatus === 'critical') {
         const now = Date.now();
         const lastSent = lastCriticalSent[item.id] || 0;
-        if (now - lastSent > 30000) {
-            if (mqttClient && mqttClient.connected) {
-                mqttClient.publish(TOPIC_CRITICAL, JSON.stringify(alertMessage), { qos: 1 });
-                console.log("Critical alert published via MQTT:", alertMessage);
-                lastCriticalSent[item.id] = now;
-            } else {
-                console.error("MQTT not connected, failed to send alert:", alertMessage);
-            }
+        if (mqttClient && mqttClient.connected) {
+            mqttClient.publish(TOPIC_CRITICAL, JSON.stringify(alertMessage), { qos: 1 });
+            console.log("Critical alert published via MQTT:", alertMessage);
+            lastCriticalSent[item.id] = now;
         } else {
-            console.log("Critical alert suppressed to avoid spam:", item.name);
+            console.error("MQTT not connected, failed to send alert:", alertMessage);
         }
     }
 
@@ -993,263 +1086,13 @@ function generateAlert(item, oldStatus, newStatus, customMessage = null) {
     }
     updateOutputDisplay();
 
-    if ((showWarnings && newStatus === 'warning') || newStatus === 'critical') {
+    if (newStatus === 'critical') {
         var outputSection = document.getElementById('outputSection');
         if (outputSection) {
             outputSection.style.display = 'block';
         }
     }
     console.log('CBM_ALERT:', JSON.stringify(alertMessage));
-}
-
-function renderNotifications() {
-    const container = document.getElementById('notificationsContainer');
-    const noNotifications = document.getElementById('noNotifications');
-    
-    if (!container) return;
-    
-    const filterValue = document.getElementById('notificationFilter') ? 
-        document.getElementById('notificationFilter').value : 'all';
-    
-    let filteredNotifications = allNotifications;
-    if (filterValue !== 'all') {
-        filteredNotifications = allNotifications.filter(n => n.type === filterValue);
-    }
-    
-    if (filteredNotifications.length === 0) {
-        if (noNotifications) noNotifications.style.display = 'block';
-        container.innerHTML = '';
-        return;
-    }
-    
-    if (noNotifications) noNotifications.style.display = 'none';
-    
-    container.innerHTML = filteredNotifications.map(notification => {
-        const timeStr = new Date(notification.timestamp).toLocaleString();
-        const icon = getNotificationIcon(notification.type);
-        
-        return `
-            <div class="notification-item ${notification.type}" data-id="${notification.id}">
-                <div class="notification-header">
-                    <div class="notification-title">
-                        ${icon} ${notification.type.toUpperCase()}
-                    </div>
-                    <div class="notification-time">${timeStr}</div>
-                </div>
-                <div class="notification-message">${notification.message}</div>
-                <div class="notification-details">
-                    <div class="notification-parameter">
-                        Parameter: <span class="notification-value">${notification.parameter}</span>
-                    </div>
-                    <div class="notification-parameter">
-                        Value: <span class="notification-value">${notification.value}${notification.unit}</span>
-                    </div>
-                    ${notification.warningCount ? `<div class="notification-parameter">
-                        Warning Count: <span class="notification-value">${notification.warningCount}</span>
-                    </div>` : ''}
-                </div>
-                <div class="notification-actions">
-                    ${notification.status === 'active' ? 
-                        '<button class="notification-btn resolve" onclick="resolveNotification(\'' + notification.id + '\')">Mark Resolved</button>' : 
-                        '<span style="color: #10b981; font-size: 12px;">✅ Resolved</span>'
-                    }
-                    <button class="notification-btn dismiss" onclick="dismissNotification('${notification.id}')">Dismiss</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function getNotificationIcon(type) {
-    switch (type) {
-        case 'critical': return '🚨';
-        case 'warning': return '⚠️';
-        case 'resolved': return '✅';
-        default: return '📢';
-    }
-}
-
-function updateNotificationStats() {
-    const stats = {
-        critical: 0,
-        warning: 0,
-        resolved: 0
-    };
-    
-    allNotifications.forEach(notification => {
-        if (notification.status === 'resolved' || notification.type === 'resolved') {
-            stats.resolved++;
-        } else {
-            stats[notification.type] = (stats[notification.type] || 0) + 1;
-        }
-    });
-    
-    const elements = {
-        totalCritical: document.getElementById('totalCritical'),
-        totalWarnings: document.getElementById('totalWarnings'),
-        totalResolved: document.getElementById('totalResolved')
-    };
-    
-    if (elements.totalCritical) elements.totalCritical.textContent = stats.critical;
-    if (elements.totalWarnings) elements.totalWarnings.textContent = stats.warning;
-    if (elements.totalResolved) elements.totalResolved.textContent = stats.resolved;
-    
-    const monitoringStats = { normal: 0, warning: 0, critical: 0 };
-    monitoringData.forEach(function(item) {
-        monitoringStats[item.status]++;
-    });
-
-    const normalCount = document.getElementById('normalCount');
-    const warningCount = document.getElementById('warningCount');
-    const criticalCount = document.getElementById('criticalCount');
-    
-    if (normalCount) normalCount.textContent = monitoringStats.normal + ' Normal';
-    if (warningCount) warningCount.textContent = monitoringStats.warning + ' Warning';
-    if (criticalCount) criticalCount.textContent = monitoringStats.critical + ' Critical';
-}
-
-function filterNotifications() {
-    renderNotifications();
-}
-
-function resolveNotification(notificationId) {
-    const notification = allNotifications.find(n => n.id == notificationId);
-    if (notification) {
-        notification.status = 'resolved';
-        notification.type = 'resolved';
-        saveConfigurationToStorage();
-        renderNotifications();
-        updateNotificationStats();
-    }
-}
-
-function dismissNotification(notificationId) {
-    const index = allNotifications.findIndex(n => n.id == notificationId);
-    if (index > -1) {
-        allNotifications.splice(index, 1);
-        saveConfigurationToStorage();
-        renderNotifications();
-        updateNotificationStats();
-    }
-}
-
-function clearAllNotifications() {
-    if (confirm('Are you sure you want to clear all notifications? This action cannot be undone.')) {
-        allNotifications = [];
-        warningCounts = {};
-        saveConfigurationToStorage();
-        renderNotifications();
-        updateNotificationStats();
-        showNotification('All notifications cleared!', 'info');
-    }
-}
-
-function exportAllConfiguration() {
-    try {
-        const exportData = {
-            architecture: {
-                components: components,
-                connections: connections
-            },
-            cbm: {
-                parameterConfig: parameterConfig,
-                monitoringData: monitoringData.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    icon: item.icon,
-                    unit: item.unit,
-                    min: item.min,
-                    max: item.max,
-                    warningConditions: item.warningConditions
-                })),
-                globalSettings: {
-                    showWarnings: showWarnings,
-                    showVariableName: showVariableName
-                },
-                alertHistory: alertHistory
-            },
-            exportDate: new Date().toISOString()
-        };
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'cbm_full_configuration_' + new Date().toISOString().split('T')[0] + '.json';
-        a.click();
-        URL.revokeObjectURL(url);
-
-        showNotification('All configuration exported successfully!', 'success');
-    } catch (error) {
-        console.error('Error exporting all configuration:', error);
-        showNotification('Error exporting configuration', 'error');
-    }
-}
-
-function importAllConfiguration(file) {
-    try {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importData = JSON.parse(e.target.result);
-
-                if (importData.architecture) {
-                    components = importData.architecture.components || [];
-                    connections = importData.architecture.connections || [];
-                    if (canvasContainer) {
-                        canvasContainer.querySelectorAll('.component-block').forEach(el => el.remove());
-                    }
-                    if (connectionsLayer) {
-                        connectionsLayer.innerHTML = '';
-                    }
-                    components.forEach(renderComponent);
-                    updateConnections();
-                }
-
-                if (importData.cbm) {
-                    if (importData.cbm.parameterConfig) parameterConfig = importData.cbm.parameterConfig;
-                    if (importData.cbm.globalSettings) {
-                        showWarnings = importData.cbm.globalSettings.showWarnings;
-                        showVariableName = importData.cbm.globalSettings.showVariableName;
-                    }
-                    if (importData.cbm.alertHistory) alertHistory = importData.cbm.alertHistory;
-
-                    monitoringData = [];
-                    if (importData.cbm.monitoringData) {
-                        importData.cbm.monitoringData.forEach(savedItem => {
-                            monitoringData.push({
-                                id: savedItem.id,
-                                name: savedItem.name,
-                                icon: savedItem.icon,
-                                value: 0,
-                                unit: savedItem.unit,
-                                min: savedItem.min,
-                                max: savedItem.max,
-                                warningConditions: savedItem.warningConditions || [],
-                                status: 'normal',
-                                history: []
-                            });
-                        });
-                    } else {
-                        initializeDefaultMonitoringData();
-                    }
-                }
-
-                saveConfigurationToStorage();
-                saveArchitectureData();
-                renderDashboard();
-                updateStatusCounts();
-
-                showNotification('All configuration imported successfully!', 'success');
-            } catch (parseError) {
-                console.error('Error parsing import file:', parseError);
-                showNotification('Error parsing configuration file', 'error');
-            }
-        };
-        reader.readAsText(file);
-    } catch (error) {
-        console.error('Error importing configuration:', error);
-        showNotification('Error importing configuration', 'error');
-    }
 }
 
 function updateStatusCounts() {
@@ -1303,7 +1146,7 @@ function renderDashboard() {
 function createMonitoringCard(item) {
     var card = document.createElement('div');
     card.className = 'monitoring-card status-' + item.status;
-    card.onclick = function() { openConfigModal(item); };
+    card.onclick = function() { openGlobalSettings(); }; // Changed to open global settings
 
     var chartBars = item.history.map(function(val) {
         var height = Math.max(5, ((val - item.min) / (item.max - item.min)) * 100);
@@ -1311,11 +1154,9 @@ function createMonitoringCard(item) {
         return '<div class="chart-bar" style="height: ' + height + '%"></div>';
     }).join('');
 
-    var displayName = showVariableName ? item.name : '';
-
     card.innerHTML =
         '<div class="card-header">' +
-            '<div class="card-title">' + displayName + '</div>' +
+            '<div class="card-title">' + item.name + '</div>' +
             '<div class="card-icon">' + item.icon + '</div>' +
         '</div>' +
         '<div class="card-content">' +
@@ -1352,7 +1193,7 @@ function updateOutputDisplay() {
     if (!outputContent) return;
 
     if (outputMessages.length === 0) {
-        outputContent.innerHTML = '<div style="color: #5f7f96; text-align: center; padding: 20px;">No warnings</div>';
+        outputContent.innerHTML = '<div style="color: #5f7f96; text-align: center; padding: 20px;">No alerts</div>';
         return;
     }
 
@@ -1374,186 +1215,294 @@ function clearAlerts() {
     }
 }
 
-function openConfigModal(item) {
-    currentConfigId = item.id;
-    var modal = document.getElementById('configModal');
-    if (!modal) return;
-
-    var header = modal.querySelector('.modal-header');
-    var statusColors = {
-        normal: '#4caf50',
-        warning: '#ff9800',
-        critical: '#f44336'
-    };
-    header.style.background = statusColors[item.status];
-
-    document.getElementById('modalTitle').textContent = 'Widget Settings';
-    document.getElementById('parameterLabel').textContent = item.name;
-    document.getElementById('minValue').value = item.min;
-    document.getElementById('maxValue').value = item.max;
-    document.getElementById('showWarnings').checked = showWarnings;
-    document.getElementById('showVariableName').checked = showVariableName;
-
-    window.tempConditions = (item.warningConditions || []).map(function(condition) {
-        return {
-            operator: condition.operator,
-            value: condition.value,
-            id: condition.id || Date.now()
-        };
-    });
-    document.getElementById('conditionEnabled').checked = false;
-    document.getElementById('conditionOperator').value = '>';
-    document.getElementById('conditionValue').value = '';
-
-    setTimeout(function() {
-        createConditionsContainer();
-        renderConditionsList();
-    }, 100);
-
-    var alertHistoryDiv = document.getElementById('alertHistory');
-    var alerts = alertHistory[item.id] || [];
-
-    if (alerts.length === 0) {
-        alertHistoryDiv.innerHTML = '<div style="color: #5f7f96; text-align: center; padding: 20px;">No warnings recorded</div>';
-    } else {
-        alertHistoryDiv.innerHTML = alerts.map(function(alert) {
-            return '<div class="alert-item">' +
-                '<span class="alert-message">' + alert.message + '</span>' +
-                '<span class="alert-time">' + alert.time + '</span>' +
-                '</div>';
-        }).join('');
-    }
-
-    modal.style.display = 'block';
-}
-
-function closeModal() {
-    var modal = document.getElementById('configModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-    currentConfigId = null;
-    window.tempConditions = [];
+function renderNotifications() {
+    const container = document.getElementById('notificationsContainer');
+    const noNotifications = document.getElementById('noNotifications');
     
-    var conditionsContainer = document.getElementById('conditionsContainer');
-    if (conditionsContainer && conditionsContainer.parentNode) {
-        conditionsContainer.parentNode.parentNode.removeChild(conditionsContainer.parentNode);
-    }
-}
-
-function addCondition() {
-    var operator = document.getElementById('conditionOperator').value;
-    var value = parseFloat(document.getElementById('conditionValue').value);
+    if (!container) return;
     
-    if (isNaN(value)) {
-        showNotification('Please enter a valid number for condition value', 'error');
-        return;
-    }
-
-    var newCondition = {
-        operator: operator,
-        value: value,
-        id: Date.now()
-    };
-
-    if (!window.tempConditions) {
-        window.tempConditions = [];
-    }
-    window.tempConditions.push(newCondition);
-    document.getElementById('conditionValue').value = '';
-    renderConditionsList();
-    showNotification('Condition added: If value is ' + operator + ' ' + value, 'success');
-}
-
-function renderConditionsList() {
-    var conditionsContainer = document.getElementById('conditionsContainer');
-    if (!conditionsContainer) {
-        createConditionsContainer();
-        conditionsContainer = document.getElementById('conditionsContainer');
+    const filterValue = document.getElementById('notificationFilter') ? 
+        document.getElementById('notificationFilter').value : 'all';
+    
+    let filteredNotifications = allNotifications;
+    if (filterValue !== 'all') {
+        filteredNotifications = allNotifications.filter(n => n.type === filterValue);
     }
     
-    var conditions = window.tempConditions || [];
-    
-    if (conditions.length === 0) {
-        conditionsContainer.innerHTML = '<div style="color: #94a3b8; text-align: center; padding: 10px; font-style: italic;">No conditions added</div>';
+    if (filteredNotifications.length === 0) {
+        if (noNotifications) noNotifications.style.display = 'block';
+        container.innerHTML = '';
         return;
     }
     
-    conditionsContainer.innerHTML = conditions.map(function(condition, index) {
-        return '<div class="condition-row" style="background: rgba(34, 197, 94, 0.1); border-left-color: #22c55e;">' +
-            '<input type="checkbox" class="condition-checkbox" checked disabled>' +
-            '<span class="condition-text">If value is ' + condition.operator + ' ' + condition.value + '</span>' +
-            '<button class="btn-danger" style="padding: 4px 8px; font-size: 12px; border-radius: 4px;" onclick="removeCondition(' + index + ')">Remove</button>' +
-            '</div>';
+    if (noNotifications) noNotifications.style.display = 'none';
+    
+    container.innerHTML = filteredNotifications.map(notification => {
+        const timeStr = new Date(notification.timestamp).toLocaleString();
+        const icon = getNotificationIcon(notification.type);
+        
+        return `
+            <div class="notification-item ${notification.type}" data-id="${notification.id}">
+                <div class="notification-header">
+                    <div class="notification-title">
+                        ${icon} ${notification.type.toUpperCase()}
+                    </div>
+                    <div class="notification-time">${timeStr}</div>
+                </div>
+                <div class="notification-message">${notification.message}</div>
+                <div class="notification-details">
+                    <div class="notification-parameter">
+                        Parameter: <span class="notification-value">${notification.parameter}</span>
+                    </div>
+                    <div class="notification-parameter">
+                        Value: <span class="notification-value">${notification.value}${notification.unit}</span>
+                    </div>
+                </div>
+                <div class="notification-actions">
+                    ${notification.status === 'active' ? 
+                        '<button class="notification-btn resolve" onclick="resolveNotification(\'' + notification.id + '\')">Mark Resolved</button>' : 
+                        '<span style="color: #10b981; font-size: 12px;">âœ… Resolved</span>'
+                    }
+                    <button class="notification-btn dismiss" onclick="dismissNotification('${notification.id}')">Dismiss</button>
+                </div>
+            </div>
+        `;
     }).join('');
 }
 
-function removeCondition(index) {
-    if (window.tempConditions && window.tempConditions[index]) {
-        var removedCondition = window.tempConditions[index];
-        window.tempConditions.splice(index, 1);
-        renderConditionsList();
-        showNotification('Condition removed: If value is ' + removedCondition.operator + ' ' + removedCondition.value, 'info');
+function getNotificationIcon(type) {
+    switch (type) {
+        case 'critical': return '🚨';
+        case 'alert': return '⚠️';
+        case 'resolved': return 'âœ…';
+        default: return '✅';
     }
 }
 
-function createConditionsContainer() {
-    var addConditionBtn = document.querySelector('.add-condition-btn');
-    if (!addConditionBtn) return;
+function updateNotificationStats() {
+    const stats = {
+        critical: 0,
+        alert: 0,
+        resolved: 0
+    };
     
-    var addConditionSection = addConditionBtn.parentNode.parentNode;
-    var conditionsListSection = document.createElement('div');
-    conditionsListSection.className = 'setting-item';
-    conditionsListSection.innerHTML = 
-        '<div style="margin-bottom: 10px; font-size: 14px; color: #f1f5f9;">Active Conditions:</div>' +
-        '<div id="conditionsContainer" style="max-height: 150px; overflow-y: auto;"></div>';
+    allNotifications.forEach(notification => {
+        if (notification.status === 'resolved' || notification.type === 'resolved') {
+            stats.resolved++;
+        } else {
+            stats[notification.type] = (stats[notification.type] || 0) + 1;
+        }
+    });
     
-    addConditionSection.parentNode.insertBefore(conditionsListSection, addConditionSection.nextSibling);
+    const elements = {
+        totalCritical: document.getElementById('totalCritical'),
+        totalAlerts: document.getElementById('totalAlerts'),
+        totalResolved: document.getElementById('totalResolved')
+    };
+    
+    if (elements.totalCritical) elements.totalCritical.textContent = stats.critical;
+    if (elements.totalAlerts) elements.totalAlerts.textContent = stats.alert;
+    if (elements.totalResolved) elements.totalResolved.textContent = stats.resolved;
+    
+    const monitoringStats = { normal: 0, success: 0, critical: 0 };
+    monitoringData.forEach(function(item) {
+        monitoringStats[item.status]++;
+    });
+
+    const normalCount = document.getElementById('normalCount');
+    const criticalCount = document.getElementById('criticalCount');
+    
+    if (normalCount) normalCount.textContent = (monitoringStats.normal + monitoringStats.success) + ' Normal';
+    if (criticalCount) criticalCount.textContent = monitoringStats.critical + ' Critical';
 }
 
-function saveConfiguration() {
-    if (!currentConfigId) return;
+function filterNotifications() {
+    renderNotifications();
+}
 
-    var item = monitoringData.find(function(i) {
-        return i.id === currentConfigId;
-    });
-    if (!item) return;
+function resolveNotification(notificationId) {
+    const notification = allNotifications.find(n => n.id == notificationId);
+    if (notification) {
+        notification.status = 'resolved';
+        notification.type = 'resolved';
+        saveConfigurationToStorage();
+        renderNotifications();
+        updateNotificationStats();
+    }
+}
 
-    var newMin = parseFloat(document.getElementById('minValue').value);
-    var newMax = parseFloat(document.getElementById('maxValue').value);
+function dismissNotification(notificationId) {
+    const index = allNotifications.findIndex(n => n.id == notificationId);
+    if (index > -1) {
+        allNotifications.splice(index, 1);
+        saveConfigurationToStorage();
+        renderNotifications();
+        updateNotificationStats();
+    }
+}
+
+function clearAllNotifications() {
+    if (confirm('Are you sure you want to clear all notifications? This action cannot be undone.')) {
+        allNotifications = [];
+        saveConfigurationToStorage();
+        renderNotifications();
+        updateNotificationStats();
+        showNotification('All notifications cleared!', 'info');
+    }
+}
+
+function openNotificationSettings() {
+    const modal = document.getElementById('notificationSettingsModal');
+    if (!modal) return;
     
-    showWarnings = document.getElementById('showWarnings').checked;
-    showVariableName = document.getElementById('showVariableName').checked;
+    renderCriticalThresholdsList();
+    modal.style.display = 'block';
+}
 
-    if (!isNaN(newMin)) item.min = newMin;
-    if (!isNaN(newMax)) item.max = newMax;
-
-    item.warningConditions = window.tempConditions || [];
-
-    if (parameterConfig[item.id]) {
-        parameterConfig[item.id].min = item.min;
-        parameterConfig[item.id].max = item.max;
-        parameterConfig[item.id].warningConditions = item.warningConditions;
+function closeNotificationSettings() {
+    const modal = document.getElementById('notificationSettingsModal');
+    if (modal) {
+        modal.style.display = 'none';
     }
+}
 
-    updateItemStatus(item);
-    renderDashboard();
-    updateStatusCounts();
-
-    if (!alertHistory[item.id]) {
-        alertHistory[item.id] = [];
+function renderCriticalThresholdsList() {
+    const container = document.getElementById('criticalThresholdsList');
+    if (!container) return;
+    
+    if (globalCriticalThresholds.length === 0) {
+        container.innerHTML = '<div class="no-thresholds">No critical thresholds configured. Go to Condition Monitoring to set up threshold rules with red color.</div>';
+        return;
     }
-    alertHistory[item.id].unshift({
-        time: new Date().toLocaleTimeString(),
-        message: 'Configuration updated - Range: ' + item.min + '-' + item.max + 
-                ', Conditions: ' + item.warningConditions.length,
-        oldStatus: item.status,
-        newStatus: item.status
-    });
-    saveConfigurationToStorage();
+    
+    container.innerHTML = globalCriticalThresholds.map(threshold => {
+        if (threshold.isFromRule) {
+            const rule = globalThresholdRules.find(r => r.id === threshold.ruleId);
+            if (!rule) return '';
+            
+            const data1Name = monitoringData.find(d => d.id === rule.data1)?.name || rule.data1;
+            let conditionText = `${data1Name} ${rule.operator1} ${rule.value1}`;
+            
+            if (rule.logicalOperator === 'AND' || rule.logicalOperator === 'OR') {
+                const data2Name = monitoringData.find(d => d.id === rule.data2)?.name || rule.data2;
+                conditionText += ` ${rule.logicalOperator} ${data2Name} ${rule.operator2} ${rule.value2}`;
+            }
+            
+            const isTriggered = evaluateGlobalRule(rule);
+            
+            return `
+                <div class="threshold-item ${isTriggered ? 'triggered' : ''}">
+                    <div class="threshold-info">
+                        <div class="threshold-parameter">${rule.message}</div>
+                        <div class="threshold-condition">Rule: ${conditionText}</div>
+                        <div class="threshold-status">Status: ${isTriggered ? 'TRIGGERED' : 'Normal'}</div>
+                    </div>
+                    <div class="threshold-status-indicator ${isTriggered ? 'critical' : 'normal'}"></div>
+                </div>
+            `;
+        }
+        return '';
+    }).join('');
+}
 
-    closeModal();
-    showNotification('Configuration saved successfully!', 'success');
+function exportAllConfiguration() {
+    try {
+        const exportData = {
+            architecture: {
+                components: components,
+                connections: connections
+            },
+            cbm: {
+                parameterConfig: parameterConfig,
+                monitoringData: monitoringData.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    icon: item.icon,
+                    unit: item.unit,
+                    min: item.min,
+                    max: item.max
+                })),
+                globalThresholdRules: globalThresholdRules,
+                globalCriticalThresholds: globalCriticalThresholds
+            },
+            exportDate: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'cbm_full_configuration_' + new Date().toISOString().split('T')[0] + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showNotification('All configuration exported successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting all configuration:', error);
+        showNotification('Error exporting configuration', 'error');
+    }
+}
+
+function importAllConfiguration(file) {
+    try {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importData = JSON.parse(e.target.result);
+
+                if (importData.architecture) {
+                    components = importData.architecture.components || [];
+                    connections = importData.architecture.connections || [];
+                    if (canvasContainer) {
+                        canvasContainer.querySelectorAll('.component-block').forEach(el => el.remove());
+                    }
+                    if (connectionsLayer) {
+                        connectionsLayer.innerHTML = '';
+                    }
+                    components.forEach(renderComponent);
+                    updateConnections();
+                }
+
+                if (importData.cbm) {
+                    if (importData.cbm.parameterConfig) parameterConfig = importData.cbm.parameterConfig;
+                    if (importData.cbm.globalThresholdRules) globalThresholdRules = importData.cbm.globalThresholdRules;
+                    if (importData.cbm.globalCriticalThresholds) globalCriticalThresholds = importData.cbm.globalCriticalThresholds;
+
+                    monitoringData = [];
+                    if (importData.cbm.monitoringData) {
+                        importData.cbm.monitoringData.forEach(savedItem => {
+                            monitoringData.push({
+                                id: savedItem.id,
+                                name: savedItem.name,
+                                icon: savedItem.icon,
+                                value: 0,
+                                unit: savedItem.unit,
+                                min: savedItem.min,
+                                max: savedItem.max,
+                                status: 'normal',
+                                history: []
+                            });
+                        });
+                    } else {
+                        initializeDefaultMonitoringData();
+                    }
+                }
+
+                saveConfigurationToStorage();
+                saveArchitectureData();
+                renderDashboard();
+                updateStatusCounts();
+
+                showNotification('All configuration imported successfully!', 'success');
+            } catch (parseError) {
+                console.error('Error parsing import file:', parseError);
+                showNotification('Error parsing configuration file', 'error');
+            }
+        };
+        reader.readAsText(file);
+    } catch (error) {
+        console.error('Error importing configuration:', error);
+        showNotification('Error importing configuration', 'error');
+    }
 }
 
 function receiveNodeRedData(data) {
@@ -1593,23 +1542,6 @@ function establishDataConnection() {
                 console.error("Error parsing MQTT message:", err);
             }
         });
-
-        // const baseUrl = 'https://100.96.1.2/node-red/api/cbm/metrics'; 
-        
-        // return fetch(baseUrl)
-        //     .then(res => {
-        //         if (!res.ok) throw new Error("HTTP " + res.status);
-        //         return res.json();
-        //     })
-        //     .then(dataObj => {
-        //         dataObj.timestamp = new Date().toISOString();
-        //         receiveNodeRedData(dataObj);
-        //         updateConnectionStatus(true);
-        //     })
-        //     .catch(err => {
-        //         console.error('❌ Error fetching data from Node-RED:', err);
-        //         updateConnectionStatus(false);
-        //     });
     }
     setInterval(fetchData, 2000);
 }
@@ -1619,7 +1551,7 @@ function showNotification(message, type) {
     var bgColor = {
         success: '#4caf50',
         error: '#f44336',
-        warning: '#ff9800'
+        info: '#2196f3'
     };
 
     notification.style.cssText =
@@ -1659,19 +1591,20 @@ function getSystemStatus() {
                 value: item.value,
                 unit: item.unit,
                 status: item.status,
-                warningConditions: item.warningConditions,
                 min: item.min,
                 max: item.max
             };
         }),
         summary: {
             normal: monitoringData.filter(function(item) { return item.status === 'normal'; }).length,
-            warning: monitoringData.filter(function(item) { return item.status === 'warning'; }).length,
+            success: monitoringData.filter(function(item) { return item.status === 'success'; }).length,
             critical: monitoringData.filter(function(item) { return item.status === 'critical'; }).length,
             total: monitoringData.length
         },
         alerts: outputMessages.slice(0, 10),
-        notifications: allNotifications.slice(0, 20)
+        notifications: allNotifications.slice(0, 20),
+        thresholdRules: globalThresholdRules,
+        criticalThresholds: globalCriticalThresholds
     };
 
     console.log('CBM_STATUS:', JSON.stringify(systemStatus));
@@ -1692,9 +1625,14 @@ document.addEventListener('click', (e) => {
 });
 
 window.onclick = function(event) {
-    var modal = document.getElementById('configModal');
-    if (modal && event.target === modal) {
-        closeModal();
+    var globalModal = document.getElementById('globalSettingsModal');
+    var notificationModal = document.getElementById('notificationSettingsModal');
+    
+    if (globalModal && event.target === globalModal) {
+        closeGlobalSettings();
+    }
+    if (notificationModal && event.target === notificationModal) {
+        closeNotificationSettings();
     }
 };
 
@@ -1734,10 +1672,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300000);
     
     setTimeout(function() {
-        const hasShownNotification = localStorage.getItem('cbm_welcome_shown');
-        if (!hasShownNotification) {
-            showNotification('Welcome! Your widget configurations and architecture diagrams will now be saved automatically and persist after page refresh.', 'info');
-            localStorage.setItem('cbm_welcome_shown', 'true');
-        }
+        showNotification('Welcome To Bosch Company.', 'info');
     }, 2000);
 });

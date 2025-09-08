@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Bosch Rexroth Industrial Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="history.css">
 </head>
 <body>
     <!-- Navigation Header -->
@@ -16,7 +17,8 @@
         <div class="header-nav">
             <button class="nav-btn active" onclick="showArchitecture()">Architecture Designer</button>
             <button class="nav-btn" onclick="showMonitoring()">Condition Monitoring</button>
-            <button class="nav-btn" onclick="showNotifications()">Notifications</button>
+            <button class="nav-btn" onclick="showNotifications()">Alarms</button>
+            <button class="nav-btn" onclick="showHistory()">Historical Data</button>
             <button class="nav-btn" onclick="exportAllConfiguration()">Export</button>
             <input type="file" id="importFile" style="display:none" onchange="importAllConfiguration(this.files[0])" />
             <button class="nav-btn"onclick="document.getElementById('importFile').click()">Import</button>
@@ -125,10 +127,6 @@
                         <div class="status-dot" style="background: #4caf50;"></div>
                         <span id="normalCount">0 Normal</span>
                     </div>
-                    <div class="status-indicator warning">
-                        <div class="status-dot" style="background: #ff9800;"></div>
-                        <span id="warningCount">0 Warning</span>
-                    </div>
                     <div class="status-indicator critical">
                         <div class="status-dot" style="background: #f44336;"></div>
                         <span id="criticalCount">0 Critical</span>
@@ -142,6 +140,11 @@
             </div>
         </div>
 
+        <!-- Global Settings Button -->
+        <div class="global-settings-bar">
+            <button class="btn btn-primary" onclick="openGlobalSettings()">Global Threshold Settings</button>
+        </div>
+
         <div class="dashboard-grid" id="dashboardGrid">
             <!-- Cards will be dynamically generated based on input data -->
         </div>
@@ -149,83 +152,90 @@
         <!-- Output Section -->
         <div class="output-section" id="outputSection" style="display: none;">
             <div class="output-header">
-                <h4>⚠️ System Warnings</h4>
+                <h4>⚠️ System Alerts</h4>
                 <button class="btn btn-danger btn-sm" onclick="clearAlerts()" style="padding: 4px 8px; font-size: 12px;">Clear</button>
             </div>
             <div class="output-content" id="outputContent">
-                <!-- Warning messages will appear here -->
+                <!-- Alert messages will appear here -->
             </div>
         </div>
 
-        <!-- Widget Settings Modal -->
-        <div id="configModal" class="modal">
+        <!-- Global Settings Modal -->
+        <div id="globalSettingsModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title" id="modalTitle">Configure Monitoring</h2>
-                    <span class="close" onclick="closeModal()">&times;</span>
+                    <h2 class="modal-title">Global Threshold Settings</h2>
+                    <span class="close" onclick="closeGlobalSettings()">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <div class="widget-settings">
-                        <div class="settings-header">
-                            <h3 class="settings-title">WIDGET SETTINGS</h3>
-                            <button class="close-settings" onclick="closeModal()">×</button>
+                    <div class="global-settings">
+                        <div class="settings-section">
+                            <h3>Threshold Rules</h3>
+                            <div class="threshold-rules" id="thresholdRules">
+                                <!-- Threshold rules will be rendered here -->
+                            </div>
+                            <div class="add-rule-section">
+                                <h4>Add New Threshold Rule</h4>
+                                <div class="rule-form">
+                                    <div class="condition-builder">
+                                        <select id="newRuleData1">
+                                            <option value="">Select Data 1</option>
+                                        </select>
+                                        <select id="newRuleOperator1">
+                                            <option value=">">></option>
+                                            <option value="<"><</option>
+                                            <option value=">=">>=</option>
+                                            <option value="<="><=</option>
+                                            <option value="==">==</option>
+                                            <option value="!=">!=</option>
+                                        </select>
+                                        <input type="number" id="newRuleValue1" placeholder="Value" step="0.1">
+
+                                        <!-- 🔽 Tambahan dropdown operator -->
+                                        <select id="newRuleLogicalOperator">
+                                            <option value="AND">AND</option>
+                                            <option value="OR">OR</option>
+                                            <option value="EQUAL">EQUAL</option>
+                                        </select>
+
+                                        <select id="newRuleData2">
+                                            <option value="">Select Data 2</option>
+                                        </select>
+                                        <select id="newRuleOperator2">
+                                            <option value=">">></option>
+                                            <option value="<"><</option>
+                                            <option value=">=">>=</option>
+                                            <option value="<="><=</option>
+                                            <option value="==">==</option>
+                                            <option value="!=">!=</option>
+                                        </select>
+                                        <input type="number" id="newRuleValue2" placeholder="Value" step="0.1">
+                                    </div>
+                                    <div class="rule-output">
+                                        <label>Alert Message:</label>
+                                        <input type="text" id="newRuleMessage" placeholder="Enter alert message">
+                                    </div>
+                                    <div class="rule-color">
+                                        <label>Status Color:</label>
+                                        <select id="newRuleColor">
+                                            <option value="green">Green</option>
+                                            <option value="yellow">Yellow</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="addThresholdRule()">Add Rule</button>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="setting-item">
-                            <label class="setting-label" id="parameterLabel">Voltage</label>
-                            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">No data available</div>
-                        </div>
-
-                        <div class="setting-item">
-                            <label class="setting-label">Values range:</label>
-                            <div class="range-inputs">
-                                <input type="number" class="range-input" id="minValue" placeholder="0" step="0.1">
-                                <span style="color: #94a3b8;">-</span>
-                                <input type="number" class="range-input" id="maxValue" placeholder="500" step="0.1">
+                        <div class="settings-section">
+                            <h3>Critical Threshold Settings</h3>
+                            <p style="color: #94a3b8; font-size: 14px; margin-bottom: 15px;">
+                                Critical thresholds are automatically determined from your alert message rules above. 
+                                When any rule's alert message is triggered, it will be classified as critical.
+                            </p>
+                            <div class="critical-settings" id="criticalSettings">
+                                <!-- Critical settings will be auto-generated from alert rules -->
                             </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="condition-row">
-                                <input type="checkbox" class="condition-checkbox" id="showWarnings" checked>
-                                <span class="condition-text">Show warning(s)</span>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div class="condition-row">
-                                <input type="checkbox" class="condition-checkbox" id="showVariableName" checked>
-                                <span class="condition-text">Show variable name</span>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <div style="margin-bottom: 10px; font-size: 14px; color: #f1f5f9;">Add Condition for Warning:</div>
-                            <div class="condition-row">
-                                <input type="checkbox" class="condition-checkbox" id="conditionEnabled">
-                                <span class="condition-text">If value is</span>
-                                <select class="condition-select" id="conditionOperator">
-                                    <option value=">">></option>
-                                    <option value="<"><</option>
-                                    <option value=">=">>=</option>
-                                    <option value="<="><=</option>
-                                    <option value="==">==</option>
-                                    <option value="!=">!=</option>
-                                </select>
-                                <input type="number" class="condition-input" id="conditionValue" placeholder="0" step="0.1">
-                                <button class="add-condition-btn" onclick="addCondition()" style="width: 30px; height: 30px; padding: 0; border-radius: 50%;">+</button>
-                            </div>
-                        </div>
-
-                        <div class="setting-item">
-                            <h3 style="color: #f1f5f9; margin-bottom: 10px; font-size: 16px;">Warning History</h3>
-                            <div class="alert-history" id="alertHistory">
-                                <!-- Warning history will be populated here -->
-                            </div>
-                        </div>
-
-                        <div class="action-buttons">
-                            <button class="save-btn" onclick="saveConfiguration()">SAVE</button>
                         </div>
                     </div>
                 </div>
@@ -237,15 +247,16 @@
     <div id="notificationsSection" class="main-section">
         <div class="header notifications-header">
             <h1 class="logo">
-                System Notifications
+                System Alarms
             </h1>
             <div class="notifications-controls">
                 <button class="btn btn-primary" onclick="clearAllNotifications()">Clear All</button>
+                <button class="btn btn-secondary" onclick="openNotificationSettings()">Settings</button>
                 <div class="notifications-filter">
                     <select id="notificationFilter" onchange="filterNotifications()">
-                        <option value="all">All Notifications</option>
+                        <option value="all">All Alarms</option>
                         <option value="critical">Critical Only</option>
-                        <option value="warning">Warnings Only</option>
+                        <option value="alert">Alerts Only</option>
                     </select>
                 </div>
             </div>
@@ -259,11 +270,11 @@
                     <div class="stat-label">Critical</div>
                 </div>
             </div>
-            <div class="stat-card warning-stat">
+            <div class="stat-card alert-stat">
                 <div class="stat-icon">⚠️</div>
                 <div class="stat-info">
-                    <div class="stat-value" id="totalWarnings">0</div>
-                    <div class="stat-label">Warnings</div>
+                    <div class="stat-value" id="totalAlerts">0</div>
+                    <div class="stat-label">Alerts</div>
                 </div>
             </div>
             <div class="stat-card resolved-stat">
@@ -278,12 +289,61 @@
         <div class="notifications-container" id="notificationsContainer">
             <div class="no-notifications" id="noNotifications">
                 <div class="no-notifications-icon">🔔</div>
-                <div class="no-notifications-text">No notifications available</div>
+                <div class="no-notifications-text">No Alarms available</div>
             </div>
+        </div>
+
+        <!-- Notification Settings Modal -->
+        <div id="notificationSettingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Alarm Settings</h2>
+                    <span class="close" onclick="closeNotificationSettings()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="notification-settings">
+                        <div class="settings-section">
+                            <h3>Critical Threshold Management</h3>
+                            <div class="critical-thresholds-list" id="criticalThresholdsList">
+                                <!-- Critical thresholds from condition monitoring will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Data Section -->
+    <div id="historySection" class="main-section">
+        <div class="header history-header">
+            <h1 class="logo">Historical Data</h1>
+            <div class="history-controls">
+                <input type="text" id="historySearch" placeholder="Search..." onkeyup="filterHistoryTable()">
+                <button class="btn btn-secondary" onclick="clearHistoryTable()">Clear</button>
+                <select id="historySort" onchange="sortHistoryByOption()">
+                    <option value="">Select Sort Option</option>
+                    <option value="date_asc">Date (Oldest First)</option>
+                    <option value="date_desc">Date (Newest First)</option>
+                    <option value="value_asc">Value (Lowest First)</option>
+                    <option value="value_desc">Value (Highest First)</option>
+                </select>
+                <button class="btn btn-primary" onclick="exportHistoryToCSV()">Export CSV</button>
+                <input type="file" id="importHistoryFile" style="display:none" accept=".csv" onchange="importHistoryFromCSV(this.files[0])" />
+                <button class="btn btn-secondary" onclick="document.getElementById('importHistoryFile').click()">Import CSV</button>
+            </div>
+        </div>
+        <div class="history-table-container">
+            <table id="historyTable">
+                <thead>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
     
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="script.js"></script>
+    <script src="history.js"></script>
 </body>
 </html>
