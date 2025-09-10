@@ -29,7 +29,7 @@
     <div id="architectureSection" class="main-section active">
         <div id="header" class="section-header">
             <div class="section-title">
-                Bosch Rexroth Struxture
+                Bosch Rexroth Structure
             </div>
             <div class="header-controls">
                 <button class="btn" onclick="clearCanvas()">Clear All</button>
@@ -72,11 +72,11 @@
             
             <div class="component-category">
                 <div class="category-title">Network & Communication</div>
-                <div class="component-item" draggable="true" data-type="Industrial Router" data-icon="/industrial-router.png">
+                <div class="component-item" draggable="true" data-type="Industrial Router" data-icon="industrial-router.png">
                     <div class="component-icon"><img src="industrial-router.png" alt="Industrial Router" style="width: 32px; height: 32px;"></div>
                     <div class="component-name">Industrial Router</div>
                 </div>
-                <div class="component-item" draggable="true" data-type="Network Switch" data-icon="/network-switch.png">
+                <div class="component-item" draggable="true" data-type="Network Switch" data-icon="network-switch.png">
                     <div class="component-icon"><img src="network-switch.png" alt="Network Switch" style="width: 32px; height: 32px;"></div>
                     <div class="component-name">Network Switch</div>
                 </div>
@@ -169,6 +169,10 @@
                 </div>
                 <div class="modal-body">
                     <div class="global-settings">
+                        <div class="settings-section">
+                            <h3>Select Motor</h3>
+                            <select id="motorSelector"></select>
+                        </div>
                         <div class="settings-section">
                             <h3>Threshold Rules</h3>
                             <div class="threshold-rules" id="thresholdRules">

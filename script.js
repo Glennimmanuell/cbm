@@ -1,3 +1,7 @@
+function getAllMonitoringData() {
+    return Object.values(monitoringDataByMotor).flat();
+}
+
 function showArchitecture() {
     document.getElementById('architectureSection').classList.add('active');
     document.getElementById('monitoringSection').classList.remove('active');
@@ -78,10 +82,9 @@ function resizeCanvas() {
 }
 
 const componentIcons = {
-    'Sensor': 'ðŸ“¡', 'Actuator': 'âš™ï¸', 'Motor': 'ðŸ”§',
-    'PLC': 'ðŸ­', 'HMI': 'ðŸ–¥ï¸', 'Safety': 'ðŸ›¡ï¸',
-    'Gateway': 'ðŸŒ', 'Switch': 'ðŸ”Œ', 'Router': 'ðŸ“¶',
-    'Cloud': 'â˜ï¸', 'Analytics': 'ðŸ“Š', 'Dashboard': 'ðŸ“ˆ'
+    'Sensor': '📡', 'Actuator': '⚙️', 'Motor': '🛠', 'PLC': '🏭', 'HMI': '🖥️', 
+    'Safety': '🦺', 'Gateway': '🌐', 'Switch': '🔀', 'Router': '📶','Cloud': '☁️', 
+    'Analytics': '📊', 'Dashboard': '📈'
 };
 
 const componentColors = {
@@ -496,17 +499,16 @@ function clearCanvas() {
     }
 }
 
-// New Global Settings System
 var parameterConfig = {
-    'Speed': { icon: 'âš¡', unit: 'RPM', min: 0, max: 3000 },
-    'Frequency': { icon: 'ðŸ”„', unit: 'Hz', min: 0, max: 100 },
-    'DC Bus Voltage': { icon: 'âš¡', unit: 'V', min: 0, max: 600 },
-    'Output Current': { icon: 'ðŸ”Œ', unit: 'A', min: 0, max: 50 },
-    'Output Voltage': { icon: 'âš¡', unit: 'V', min: 0, max: 500 },
-    'Temperature': { icon: 'ðŸŒ¡ï¸', unit: 'Â°C', min: 0, max: 150 }
+    'Speed': { icon: '🏎️', unit: 'RPM', min: 0, max: 3000 },
+    'Frequency': { icon: '📡', unit: 'Hz', min: 0, max: 100 },
+    'DC Bus Voltage': { icon: '⚡', unit: 'V', min: 0, max: 600 },
+    'Output Current': { icon: '🔌', unit: 'A', min: 0, max: 50 },
+    'Output Voltage': { icon: '🔋', unit: 'V', min: 0, max: 500 },
+    'Temperature': { icon: '🌡️', unit: '°C', min: 0, max: 150 }
 };
 
-var monitoringData = [];
+var monitoringDataByMotor = {};
 var globalThresholdRules = [];
 var globalCriticalThresholds = [];
 var allNotifications = [];
@@ -554,10 +556,12 @@ function saveConfigurationToStorage() {
     try {
         const config = {
             parameterConfig: parameterConfig,
-            monitoringData: monitoringData,
+            monitoringDataByMotor: monitoringDataByMotor,
             globalThresholdRules: globalThresholdRules,
             globalCriticalThresholds: globalCriticalThresholds,
-            allNotifications: allNotifications
+            allNotifications: allNotifications,
+            ruleAlertCounters: ruleAlertCounters,
+            lastCriticalSent: lastCriticalSent
         };
         localStorage.setItem(STORAGE_KEYS.PARAMETER_CONFIG, JSON.stringify(config));
         console.log('Configuration saved to localStorage');
@@ -572,11 +576,20 @@ function loadConfigurationFromStorage() {
         if (saved) {
             const parsed = JSON.parse(saved);
             parameterConfig = parsed.parameterConfig || parameterConfig;
-            monitoringData = parsed.monitoringData || monitoringData;
+            monitoringDataByMotor = parsed.monitoringDataByMotor || {};
             globalThresholdRules = parsed.globalThresholdRules || [];
             globalCriticalThresholds = parsed.globalCriticalThresholds || [];
             allNotifications = parsed.allNotifications || [];
+            ruleAlertCounters = parsed.ruleAlertCounters || {};
+            lastCriticalSent = parsed.lastCriticalSent || {};
             console.log('Configuration loaded from localStorage');
+            
+            if (Object.keys(monitoringDataByMotor).length > 0) {
+                renderDashboard();
+                refreshMotorDropdown();
+                updateNotificationStats();
+            }
+            
             return true;
         }
     } catch (error) {
@@ -585,22 +598,33 @@ function loadConfigurationFromStorage() {
     return false;
 }
 
-
 function initializeDashboard() {
-    loadConfigurationFromStorage();
+    const configLoaded = loadConfigurationFromStorage();
+    if (!configLoaded || Object.keys(monitoringDataByMotor).length === 0) {
+        initializeDefaultMonitoringData("Motor_1");
+        initializeDefaultMonitoringData("Motor_2");
+    }
+    
     updateStatusCounts();
+    renderDashboard();
+    refreshMotorDropdown();
 
     setInterval(function() {
         checkDataFreshness();
     }, 2000);
+    
+    setInterval(function() {
+        saveConfigurationToStorage();
+    }, 30000);
 }
 
-function initializeDefaultMonitoringData() {
+function initializeDefaultMonitoringData(motorName = "Default") {
     Object.keys(parameterConfig).forEach(function(key) {
         var config = parameterConfig[key];
-        monitoringData.push({
-            id: key,
-            name: key,
+        monitoringDataByMotor[motorName] = monitoringDataByMotor[motorName] || [];
+        monitoringDataByMotor[motorName].push({
+            id: `${motorName}.${key}`,
+            name: `${motorName} - ${key}`,
             icon: config.icon,
             value: 0,
             unit: config.unit,
@@ -613,50 +637,47 @@ function initializeDefaultMonitoringData() {
 }
 
 function updateMonitoringData(data) {
-    Object.keys(data).forEach(function(key) {
-        if (key !== 'timestamp') {
-            let existingParam = monitoringData.find(item => item.id === key);
+    const motorName = data.Name || "Unknown";
+    if (!monitoringDataByMotor[motorName]) {
+        monitoringDataByMotor[motorName] = [];
+        Object.keys(parameterConfig).forEach(key => {
+            monitoringDataByMotor[motorName].push({
+                id: `${motorName}.${key}`,
+                name: `${motorName} - ${key}`,
+                icon: parameterConfig[key].icon,
+                value: 0,
+                unit: parameterConfig[key].unit,
+                min: parameterConfig[key].min,
+                max: parameterConfig[key].max,
+                status: "normal",
+                history: []
+            });
+        });
+        refreshMotorDropdown();
+    }
 
-            if (!existingParam) {
-                monitoringData.push({
-                    id: key,
-                    name: key,
-                    icon: '📊',
-                    value: 0,
-                    unit: '',
-                    min: 0,
-                    max: 100,
-                    status: 'normal',
-                    history: []
-                });
-                existingParam = monitoringData.find(item => item.id === key);
+    Object.keys(data).forEach(key => {
+        if (key !== "timestamp" && key !== "Name") {
+            const param = monitoringDataByMotor[motorName].find(item => item.id === `${motorName}.${key}`);
+            if (param) {
+                const newValue = parseFloat(data[key]);
+                param.value = newValue;
+                param.history.push(newValue);
+                if (param.history.length > 10) param.history.shift();
+                updateItemStatus(param);
             }
-
-            var newValue = parseFloat(data[key]);
-            existingParam.value = newValue;
-
-            // ⬇️ selalu simpan history biar grafik muncul
-            existingParam.history.push(newValue);
-            if (existingParam.history.length > 10) {
-                existingParam.history.shift();
-            }
-
-            // ⬇️ update status tetap jalan
-            updateItemStatus(existingParam);
         }
     });
 
-    populateDataSelectors();
+    updateLastUpdate(data.timestamp);
+    renderDashboard();
 }
 
 function updateItemStatus(item) {
     var previousStatus = item.status;
-    item.status = 'normal'; // Default to blue/normal
-    
-    // Check global threshold rules
+    item.status = 'normal';
     globalThresholdRules.forEach(function(rule) {
         if (evaluateGlobalRule(rule)) {
-            // Only apply color to parameters that are part of this specific rule
             if (item.id === rule.data1 || item.id === rule.data2) {
                 if (rule.color === 'green') {
                     item.status = 'success';
@@ -696,8 +717,6 @@ function updateItemStatus(item) {
             }
         }
     });
-    
-    // Check critical thresholds (only for individual parameters)
     globalCriticalThresholds.forEach(function(threshold) {
         if (threshold.parameter === item.id && item.value >= threshold.value) {
             item.status = 'critical';
@@ -707,8 +726,8 @@ function updateItemStatus(item) {
 }
 
 function evaluateGlobalRule(rule) {
-    var data1 = monitoringData.find(item => item.id === rule.data1);
-    var data2 = monitoringData.find(item => item.id === rule.data2);
+    var data1 = getAllMonitoringData().find(item => item.id === rule.data1);
+    var data2 = getAllMonitoringData().find(item => item.id === rule.data2);
     
     if (!data1 || !data2) return false;
     
@@ -740,8 +759,6 @@ function evaluateCondition(value, operator, threshold) {
 function openGlobalSettings() {
     const modal = document.getElementById('globalSettingsModal');
     if (!modal) return;
-    
-    // Populate data selectors
     populateDataSelectors();
     renderThresholdRules();
     renderCriticalSettings();
@@ -762,7 +779,7 @@ function populateDataSelectors() {
         const selector = document.getElementById(selectorId);
         if (selector) {
             selector.innerHTML = '<option value="">Select Parameter</option>';
-            monitoringData.forEach(item => {
+            getAllMonitoringData().forEach(item => {
                 const option = document.createElement('option');
                 option.value = item.id;
                 option.textContent = item.name;
@@ -796,23 +813,16 @@ function addThresholdRule() {
         logicalOperator,
         message, color
     };
-
-    // simpan rule
     globalThresholdRules.push(newRule);
-
-    // buat derived critical threshold yang mengacu ke rule ini
     const derivedCritical = {
         id: Date.now() + Math.random(),
         isFromRule: true,
         ruleId: newRule.id
     };
     globalCriticalThresholds.push(derivedCritical);
-
-    // re-render UI terkait
     renderThresholdRules();
     renderCriticalSettings();
 
-    // bersihkan form
     document.getElementById('newRuleData1').value = '';
     document.getElementById('newRuleValue1').value = '';
     document.getElementById('newRuleData2').value = '';
@@ -837,11 +847,9 @@ function addCriticalThreshold() {
         parameter,
         value
     };
-    
     globalCriticalThresholds.push(newThreshold);
     renderCriticalSettings();
     
-    // Clear form
     document.getElementById('newCriticalData').value = '';
     document.getElementById('newCriticalValue').value = '';
     
@@ -859,8 +867,8 @@ function renderThresholdRules() {
     }
 
     container.innerHTML = globalThresholdRules.map(rule => {
-        const data1Name = monitoringData.find(d => d.id === rule.data1)?.name || rule.data1;
-        const data2Name = monitoringData.find(d => d.id === rule.data2)?.name || rule.data2;
+        const data1Name = getAllMonitoringData().find(d => d.id === rule.data1)?.name || rule.data1;
+        const data2Name = getAllMonitoringData().find(d => d.id === rule.data2)?.name || rule.data2;
         const logical = rule.logicalOperator || 'AND';
 
         return `
@@ -880,22 +888,16 @@ function renderThresholdRules() {
 function renderCriticalSettings() {
     const container = document.getElementById('criticalSettings');
     if (!container) return;
-
     const items = [];
-
-    // tampilkan derived thresholds dari rules
     const derived = globalCriticalThresholds.filter(th => th.isFromRule);
     derived.forEach(threshold => {
         const rule = globalThresholdRules.find(r => r.id === threshold.ruleId);
         if (!rule) return;
-
-        const data1Name = monitoringData.find(d => d.id === rule.data1)?.name || rule.data1;
-        const data2Name = monitoringData.find(d => d.id === rule.data2)?.name || rule.data2;
+        const data1Name = getAllMonitoringData().find(d => d.id === rule.data1)?.name || rule.data1;
+        const data2Name = getAllMonitoringData().find(d => d.id === rule.data2)?.name || rule.data2;
         const logical = rule.logicalOperator || 'AND';
         const conditionText = `${data1Name} ${rule.operator1} ${rule.value1} ${logical} ${data2Name} ${rule.operator2} ${rule.value2}`;
         const isTriggered = evaluateGlobalRule(rule);
-
-        // pakai threshold.value kalau ada, default kosong
         const critVal = threshold.value !== undefined ? threshold.value : "";
 
         items.push(`
@@ -915,10 +917,9 @@ function renderCriticalSettings() {
         `);
     });
 
-    // tampilkan manual critical thresholds
     const manual = globalCriticalThresholds.filter(th => !th.isFromRule);
     manual.forEach(threshold => {
-        const paramName = monitoringData.find(d => d.id === threshold.parameter)?.name || threshold.parameter;
+        const paramName = getAllMonitoringData().find(d => d.id === threshold.parameter)?.name || threshold.parameter;
         const critVal = threshold.value !== undefined ? threshold.value : "";
 
         items.push(`
@@ -936,11 +937,7 @@ function renderCriticalSettings() {
         `);
     });
 
-    if (items.length === 0) {
-        container.innerHTML = '<div class="no-settings">No critical thresholds configured</div>';
-    } else {
-        container.innerHTML = items.join('');
-    }
+    container.innerHTML = items.length === 0 ? '<div class="no-settings">No critical thresholds configured</div>' : items.join('');
 }
 
 function updateCriticalValue(thresholdId, newValue) {
@@ -960,11 +957,7 @@ function removeThresholdRule(ruleId) {
         showNotification('Invalid rule id', 'error');
         return;
     }
-
-    // hapus rule
     globalThresholdRules = globalThresholdRules.filter(rule => rule.id !== idToRemove);
-
-    // hapus derived critical thresholds yang terkait
     globalCriticalThresholds = globalCriticalThresholds.filter(th => !(th.isFromRule && th.ruleId === idToRemove));
 
     renderThresholdRules();
@@ -983,12 +976,10 @@ function removeCriticalThreshold(thresholdId) {
     const threshold = globalCriticalThresholds.find(th => th.id === idToRemove);
     if (!threshold) return;
 
-    // jika derived dari rule, hapus rule juga
     if (threshold.isFromRule && threshold.ruleId) {
         globalThresholdRules = globalThresholdRules.filter(r => r.id !== threshold.ruleId);
     }
 
-    // hapus threshold
     globalCriticalThresholds = globalCriticalThresholds.filter(th => th.id !== idToRemove);
 
     renderThresholdRules();
@@ -1000,14 +991,12 @@ function removeCriticalThreshold(thresholdId) {
 function addNotification(notification) {
     const now = Date.now();
 
-    // 🔒 Cegah duplikat (pesan sama dalam 2 detik terakhir)
     const isDuplicate = allNotifications.some(n =>
         n.message === notification.message &&
         Math.abs(new Date(n.timestamp).getTime() - now) < 2000
     );
     if (isDuplicate) return;
 
-    // 📊 kalau notifikasi tipe alert, tambahkan counter
     if (notification.type === 'alert') {
         const ruleKey = notification.message; 
         if (!ruleAlertCounters[ruleKey]) {
@@ -1015,7 +1004,6 @@ function addNotification(notification) {
         }
         ruleAlertCounters[ruleKey]++;
 
-        // cari critical threshold yg terkait rule/message
         const derivedThreshold = globalCriticalThresholds.find(th => 
             (th.isFromRule && th.ruleId) || 
             (!th.isFromRule && th.parameter === notification.parameter)
@@ -1023,21 +1011,17 @@ function addNotification(notification) {
 
         let critVal = derivedThreshold && derivedThreshold.value ? derivedThreshold.value : 0;
 
-        // kalau sudah mencapai critical value, upgrade jadi critical
         if (critVal > 0 && ruleAlertCounters[ruleKey] >= critVal) {
             notification.type = 'critical';
             notification.severity = 'critical';
             notification.status = 'active';
 
-            // publish langsung ke MQTT broker
             if (mqttClient && mqttClient.connected) {
                 mqttClient.publish(TOPIC_CRITICAL, JSON.stringify(notification), { qos: 1 });
                 console.log("Critical alert published via MQTT (from counter):", notification);
             } else {
                 console.error("MQTT not connected, failed to publish critical alert:", notification);
             }
-
-            // reset counter supaya tiap kelipatan (5,10,15 dst) naik critical
             ruleAlertCounters[ruleKey] = 0;
         }
     }
@@ -1132,21 +1116,42 @@ function renderDashboard() {
     
     grid.innerHTML = '';
 
-    if (monitoringData.length === 0) {
+    if (Object.keys(monitoringDataByMotor).length === 0) {
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #fff; padding: 40px;">No data available. Waiting for real-time data...</div>';
         return;
     }
 
-    monitoringData.forEach(function(item) {
-        var card = createMonitoringCard(item);
-        grid.appendChild(card);
+    Object.keys(monitoringDataByMotor).forEach(motorName => {
+        const header = document.createElement("h2");
+        header.textContent = motorName;
+        header.style.color = "#fff";
+        header.style.gridColumn = "1/-1";
+        grid.appendChild(header);
+
+        monitoringDataByMotor[motorName].forEach(item => {
+            var card = createMonitoringCard(item);
+            grid.appendChild(card);
+        });
+    });
+}
+
+function refreshMotorDropdown() {
+    const selector = document.getElementById("motorSelector");
+    if (!selector) return;
+
+    selector.innerHTML = '';
+    Object.keys(monitoringDataByMotor).forEach(motorName => {
+        const option = document.createElement("option");
+        option.value = motorName;
+        option.textContent = motorName;
+        selector.appendChild(option);
     });
 }
 
 function createMonitoringCard(item) {
     var card = document.createElement('div');
     card.className = 'monitoring-card status-' + item.status;
-    card.onclick = function() { openGlobalSettings(); }; // Changed to open global settings
+    card.onclick = function() { openGlobalSettings(); };
 
     var chartBars = item.history.map(function(val) {
         var height = Math.max(5, ((val - item.min) / (item.max - item.min)) * 100);
@@ -1261,7 +1266,7 @@ function renderNotifications() {
                 <div class="notification-actions">
                     ${notification.status === 'active' ? 
                         '<button class="notification-btn resolve" onclick="resolveNotification(\'' + notification.id + '\')">Mark Resolved</button>' : 
-                        '<span style="color: #10b981; font-size: 12px;">âœ… Resolved</span>'
+                        '<span style="color: #10b981; font-size: 12px;">Ã¢Å“â€¦ Resolved</span>'
                     }
                     <button class="notification-btn dismiss" onclick="dismissNotification('${notification.id}')">Dismiss</button>
                 </div>
@@ -1274,46 +1279,35 @@ function getNotificationIcon(type) {
     switch (type) {
         case 'critical': return '🚨';
         case 'alert': return '⚠️';
-        case 'resolved': return 'âœ…';
-        default: return '✅';
+        case 'resolved': return '✅';
+        default: return 'ℹ️';
     }
 }
 
 function updateNotificationStats() {
-    const stats = {
-        critical: 0,
-        alert: 0,
-        resolved: 0
-    };
-    
-    allNotifications.forEach(notification => {
-        if (notification.status === 'resolved' || notification.type === 'resolved') {
-            stats.resolved++;
-        } else {
-            stats[notification.type] = (stats[notification.type] || 0) + 1;
-        }
-    });
-    
-    const elements = {
-        totalCritical: document.getElementById('totalCritical'),
-        totalAlerts: document.getElementById('totalAlerts'),
-        totalResolved: document.getElementById('totalResolved')
-    };
-    
-    if (elements.totalCritical) elements.totalCritical.textContent = stats.critical;
-    if (elements.totalAlerts) elements.totalAlerts.textContent = stats.alert;
-    if (elements.totalResolved) elements.totalResolved.textContent = stats.resolved;
-    
-    const monitoringStats = { normal: 0, success: 0, critical: 0 };
-    monitoringData.forEach(function(item) {
-        monitoringStats[item.status]++;
+    let totalCritical = 0;
+    let totalAlerts = 0;
+    let totalResolved = 0;
+
+    allNotifications.forEach(n => {
+        if (n.type === 'critical') totalCritical++;
+        else if (n.type === 'alert') totalAlerts++;
+        else if (n.type === 'resolved') totalResolved++;
     });
 
-    const normalCount = document.getElementById('normalCount');
-    const criticalCount = document.getElementById('criticalCount');
-    
-    if (normalCount) normalCount.textContent = (monitoringStats.normal + monitoringStats.success) + ' Normal';
-    if (criticalCount) criticalCount.textContent = monitoringStats.critical + ' Critical';
+    const critEl = document.getElementById('totalCritical');
+    const alertEl = document.getElementById('totalAlerts');
+    const resolvedEl = document.getElementById('totalResolved');
+    const normalCountEl = document.getElementById('normalCount');
+    const criticalCountEl = document.getElementById('criticalCount');
+
+    if (critEl) critEl.textContent = totalCritical;
+    if (alertEl) alertEl.textContent = totalAlerts;
+    if (resolvedEl) resolvedEl.textContent = totalResolved;
+
+    const systemStatus = getSystemStatus();
+    if (normalCountEl) normalCountEl.textContent = `${systemStatus.normal} Normal`;
+    if (criticalCountEl) criticalCountEl.textContent = `${systemStatus.critical} Critical`;
 }
 
 function filterNotifications() {
@@ -1380,11 +1374,13 @@ function renderCriticalThresholdsList() {
             const rule = globalThresholdRules.find(r => r.id === threshold.ruleId);
             if (!rule) return '';
             
-            const data1Name = monitoringData.find(d => d.id === rule.data1)?.name || rule.data1;
+            const data1Item = getAllMonitoringData().find(d => d.id === rule.data1);
+            const data1Name = data1Item ? data1Item.name : rule.data1;
             let conditionText = `${data1Name} ${rule.operator1} ${rule.value1}`;
             
             if (rule.logicalOperator === 'AND' || rule.logicalOperator === 'OR') {
-                const data2Name = monitoringData.find(d => d.id === rule.data2)?.name || rule.data2;
+                const data2Item = getAllMonitoringData().find(d => d.id === rule.data2);
+                const data2Name = data2Item ? data2Item.name : rule.data2;
                 conditionText += ` ${rule.logicalOperator} ${data2Name} ${rule.operator2} ${rule.value2}`;
             }
             
@@ -1414,16 +1410,11 @@ function exportAllConfiguration() {
             },
             cbm: {
                 parameterConfig: parameterConfig,
-                monitoringData: monitoringData.map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    icon: item.icon,
-                    unit: item.unit,
-                    min: item.min,
-                    max: item.max
-                })),
+                monitoringDataByMotor: monitoringDataByMotor,
                 globalThresholdRules: globalThresholdRules,
-                globalCriticalThresholds: globalCriticalThresholds
+                globalCriticalThresholds: globalCriticalThresholds,
+                allNotifications: allNotifications,
+                ruleAlertCounters: ruleAlertCounters
             },
             exportDate: new Date().toISOString()
         };
@@ -1466,30 +1457,21 @@ function importAllConfiguration(file) {
                     if (importData.cbm.parameterConfig) parameterConfig = importData.cbm.parameterConfig;
                     if (importData.cbm.globalThresholdRules) globalThresholdRules = importData.cbm.globalThresholdRules;
                     if (importData.cbm.globalCriticalThresholds) globalCriticalThresholds = importData.cbm.globalCriticalThresholds;
+                    if (importData.cbm.allNotifications) allNotifications = importData.cbm.allNotifications;
+                    if (importData.cbm.ruleAlertCounters) ruleAlertCounters = importData.cbm.ruleAlertCounters;
 
-                    monitoringData = [];
-                    if (importData.cbm.monitoringData) {
-                        importData.cbm.monitoringData.forEach(savedItem => {
-                            monitoringData.push({
-                                id: savedItem.id,
-                                name: savedItem.name,
-                                icon: savedItem.icon,
-                                value: 0,
-                                unit: savedItem.unit,
-                                min: savedItem.min,
-                                max: savedItem.max,
-                                status: 'normal',
-                                history: []
-                            });
-                        });
+                    if (importData.cbm.monitoringDataByMotor) {
+                        monitoringDataByMotor = importData.cbm.monitoringDataByMotor;
                     } else {
-                        initializeDefaultMonitoringData();
+                        monitoringDataByMotor = {};
+                        initializeDefaultMonitoringData("Motor_1");
                     }
                 }
 
                 saveConfigurationToStorage();
                 saveArchitectureData();
                 renderDashboard();
+                refreshMotorDropdown();
                 updateStatusCounts();
 
                 showNotification('All configuration imported successfully!', 'success');
@@ -1583,32 +1565,17 @@ function showNotification(message, type) {
 }
 
 function getSystemStatus() {
-    var systemStatus = {
-        timestamp: new Date().toISOString(),
-        parameters: monitoringData.map(function(item) {
-            return {
-                name: item.name,
-                value: item.value,
-                unit: item.unit,
-                status: item.status,
-                min: item.min,
-                max: item.max
-            };
-        }),
-        summary: {
-            normal: monitoringData.filter(function(item) { return item.status === 'normal'; }).length,
-            success: monitoringData.filter(function(item) { return item.status === 'success'; }).length,
-            critical: monitoringData.filter(function(item) { return item.status === 'critical'; }).length,
-            total: monitoringData.length
-        },
-        alerts: outputMessages.slice(0, 10),
-        notifications: allNotifications.slice(0, 20),
-        thresholdRules: globalThresholdRules,
-        criticalThresholds: globalCriticalThresholds
-    };
+    let critical = 0;
+    let alerts = 0;
+    let normal = 0;
 
-    console.log('CBM_STATUS:', JSON.stringify(systemStatus));
-    return systemStatus;
+    getAllMonitoringData().forEach(item => {
+        if (item.status === 'critical') critical++;
+        else if (item.status === 'alert') alerts++;
+        else normal++;
+    });
+
+    return { critical, alerts, normal };
 }
 
 document.addEventListener('click', (e) => {
@@ -1639,12 +1606,12 @@ window.onclick = function(event) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Industrial Dashboard Suite loaded successfully');
     console.log('Loading saved configurations...');
-    loadConfigurationFromStorage();
     
     if (loadArchitectureData()) {
         components.forEach(renderComponent);
         updateConnections();
     }
+    loadConfigurationFromStorage();
     
     window.addEventListener('resize', () => {
         if (document.getElementById('architectureSection').classList.contains('active')) {
@@ -1662,13 +1629,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 30000);
 
     setInterval(function() {
-        if (monitoringData.length > 0) {
-            saveConfigurationToStorage();
-        }
-        if (components.length > 0 || connections.length > 0) {
-            saveArchitectureData();
-        }
-        console.log('Auto-saved configurations for both sections.');
+        saveConfigurationToStorage();
+        saveArchitectureData();
+        console.log('Auto-saved all configurations.');
     }, 300000);
     
     setTimeout(function() {

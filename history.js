@@ -23,18 +23,43 @@ mqttHistory.on("message", (topic, message) => {
     }
 });
 
+function formatTimestamp(ts) {
+    if (!ts) return "-";
+    try {
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return ts;
+
+        // format misalnya: "10 Sep 2025, 11:01:35"
+        const dateStr = new Intl.DateTimeFormat('id-ID', { 
+            day: '2-digit', month: 'short', year: 'numeric' 
+        }).format(d);
+        const timeStr = new Intl.DateTimeFormat('id-ID', { 
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
+        }).format(d).replace(/\./g, ':');
+        return `${dateStr}, ${timeStr}`;
+    } catch (e) {
+        return ts;
+    }
+}
+
 function addHistoryRow(data) {
     const table = document.getElementById("historyTable");
     const thead = table.querySelector("thead");
     const tbody = table.querySelector("tbody");
-    const keys = Object.keys(data).filter(k => !excludedFields.includes(k));
-
+    const rowData = {
+        time: data._time ? formatTimestamp(data._time) : "-",
+        value: data._value ?? "-",
+        field: data._field || "-",
+        measurement: data._measurement || "-"
+    };
     if (historyColumns.length === 0) {
-        historyColumns = keys;
+        historyColumns = ["time", "value", "field", "measurement"];
 
         thead.innerHTML = `
             <tr>
-                ${historyColumns.map((key, idx) => `<th onclick="sortHistoryTable(${idx})" style="cursor:pointer;">${key}</th>`).join("")}
+                ${historyColumns.map((key, idx) => 
+                    `<th onclick="sortHistoryTable(${idx})" style="cursor:pointer;">${key}</th>`
+                ).join("")}
             </tr>
         `;
 
@@ -50,11 +75,24 @@ function addHistoryRow(data) {
         }
     }
 
+    // tambah row baru
     const row = tbody.insertRow();
     historyColumns.forEach(key => {
         const cell = row.insertCell();
-        cell.textContent = data[key] ?? "-";
-        cell.setAttribute("data-value", data[key] ?? "");
+        let displayValue = rowData[key];
+        let rawValue = rowData[key];
+
+        if (key === "time" && data._time) {
+            displayValue = formatTimestamp(data._time);
+            rawValue = new Date(data._time).getTime();
+        }
+        if (key === "value" && data._value !== undefined) {
+            displayValue = data._value;
+            rawValue = parseFloat(data._value);
+        }
+
+        cell.textContent = displayValue;
+        cell.setAttribute("data-value", rawValue);
     });
 }
 
@@ -97,8 +135,8 @@ function sortHistoryTable(colIndex) {
         
         if (!cellA || !cellB) return 0;
         
-        let valueA = cellA.textContent.trim();
-        let valueB = cellB.textContent.trim();
+        let valueA = cellA.getAttribute("data-value") || cellA.textContent.trim();
+        let valueB = cellB.getAttribute("data-value") || cellB.textContent.trim();
         
         if (valueA === "-" || valueA === "") valueA = newSort === "asc" ? "zzz" : "";
         if (valueB === "-" || valueB === "") valueB = newSort === "asc" ? "zzz" : "";
@@ -154,7 +192,8 @@ function sortHistoryByOption() {
         );
         isAscending = sortOption.includes("asc");
     } else if (sortOption.includes("value")) {
-        sortColumnIndex = findBestNumericColumn();
+        sortColumnIndex = historyColumns.findIndex(col => col.toLowerCase() === "value");
+        if (sortColumnIndex === -1) sortColumnIndex = findBestNumericColumn(); // fallback
         isAscending = sortOption.includes("asc");
     }
     
@@ -179,8 +218,8 @@ function sortHistoryByOption() {
         }
         
         if (sortOption.includes("date")) {
-            const dateA = new Date(valueA);
-            const dateB = new Date(valueB);
+            const dateA = new Date(valueA.includes("T") ? valueA : Date.parse(valueA));
+            const dateB = new Date(valueB.includes("T") ? valueB : Date.parse(valueB));
             
             if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
                 return isAscending ? dateA - dateB : dateB - dateA;
@@ -433,8 +472,8 @@ function parseAndImportCSV(csvData) {
                 <option value="">Select Sort Option</option>
                 <option value="date_asc">Date (Oldest First)</option>
                 <option value="date_desc">Date (Newest First)</option>
-                <option value="value_desc">Value (High → Low)</option>
-                <option value="value_asc">Value (Low → High)</option>
+                <option value="value_desc">Value (High â†’ Low)</option>
+                <option value="value_asc">Value (Low â†’ High)</option>
             `;
         }
         let importedCount = 0;
