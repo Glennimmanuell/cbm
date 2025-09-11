@@ -82,15 +82,27 @@ function resizeCanvas() {
 }
 
 const componentIcons = {
-    'Sensor': '📡', 'Actuator': '⚙️', 'Motor': '🛠', 'PLC': '🏭', 'HMI': '🖥️', 
-    'Safety': '🦺', 'Gateway': '🌐', 'Switch': '🔀', 'Router': '📶','Cloud': '☁️', 
-    'Analytics': '📊', 'Dashboard': '📈'
+    'Sensor': 'ðŸ"¡', 
+    'Actuator': 'âš™ï¸', 
+    'Electric Motor': 'ðŸ"§', 
+    'Hydraulic Motor': 'ðŸ"§', 
+    'Hydraulic Pump': 'ðŸ"„', 
+    'Hydraulic Cylinder': 'ðŸ"', 
+    'PLC': 'ðŸ–¥ï¸', 
+    'HMI': 'ðŸ"±', 
+    'Safety': 'ðŸ›¡ï¸', 
+    'Gateway': 'ðŸŒ', 
+    'Switch': 'ðŸ"€', 
+    'Router': 'ðŸ"¶',
+    'Cloud': 'â˜ï¸', 
+    'Analytics': 'ðŸ"Š', 
+    'Dashboard': 'ðŸ"ˆ'
 };
 
 const componentColors = {
-    'Sensor': '#4caf50', 'Actuator': '#ff9800', 'Motor': '#9c27b0',
-    'PLC': '#1976d2', 'HMI': '#2196f3', 'Safety': '#f44336',
-    'Gateway': '#607d8b', 'Switch': '#795548', 'Router': '#3f51b5',
+    'Sensor': '#4caf50', 'Actuator': '#ff9800', 'Electric Motor': '#9c27b0', 'Hydraulic Motor': '#8e24aa',
+    'Hydraulic Pump': '#1976d2', 'Hydraulic Cylinder': '#388e3c', 'PLC': '#1976d2', 'HMI': '#2196f3', 
+    'Safety': '#f44336', 'Gateway': '#607d8b', 'Switch': '#795548', 'Router': '#3f51b5',
     'Cloud': '#00bcd4', 'Analytics': '#8bc34a', 'Dashboard': '#ffc107'
 };
 
@@ -135,7 +147,7 @@ function createComponent(type, icon, x, y) {
         id: Date.now() + Math.random(),
         type: type,
         icon: icon || componentIcons[type],
-        iconType: icon && icon.includes('.png') ? 'image' : 'emoji',
+        iconType: icon && icon.includes('.png') || icon && icon.includes('.jpg') ? 'image' : 'emoji',
         x: x,
         y: y,
         width: 120,
@@ -499,13 +511,14 @@ function clearCanvas() {
     }
 }
 
+// MODIFIED: Parameter configuration without icons
 var parameterConfig = {
-    'Speed': { icon: '🏎️', unit: 'RPM', min: 0, max: 3000 },
-    'Frequency': { icon: '📡', unit: 'Hz', min: 0, max: 100 },
-    'DC Bus Voltage': { icon: '⚡', unit: 'V', min: 0, max: 600 },
-    'Output Current': { icon: '🔌', unit: 'A', min: 0, max: 50 },
-    'Output Voltage': { icon: '🔋', unit: 'V', min: 0, max: 500 },
-    'Temperature': { icon: '🌡️', unit: '°C', min: 0, max: 150 }
+    'Speed': { unit: 'RPM', min: 0, max: 3000 },
+    'Frequency': { unit: 'Hz', min: 0, max: 100 },
+    'DC Bus Voltage': { unit: 'V', min: 0, max: 600 },
+    'Output Current': { unit: 'A', min: 0, max: 50 },
+    'Output Voltage': { unit: 'V', min: 0, max: 500 },
+    'Temperature': { unit: '°C', min: 0, max: 150 }
 };
 
 var monitoringDataByMotor = {};
@@ -600,10 +613,8 @@ function loadConfigurationFromStorage() {
 
 function initializeDashboard() {
     const configLoaded = loadConfigurationFromStorage();
-    if (!configLoaded || Object.keys(monitoringDataByMotor).length === 0) {
-        initializeDefaultMonitoringData("Motor_1");
-        initializeDefaultMonitoringData("Motor_2");
-    }
+    
+    // Remove default motor initialization - only load from saved data or wait for real data
     
     updateStatusCounts();
     renderDashboard();
@@ -618,24 +629,6 @@ function initializeDashboard() {
     }, 30000);
 }
 
-function initializeDefaultMonitoringData(motorName = "Default") {
-    Object.keys(parameterConfig).forEach(function(key) {
-        var config = parameterConfig[key];
-        monitoringDataByMotor[motorName] = monitoringDataByMotor[motorName] || [];
-        monitoringDataByMotor[motorName].push({
-            id: `${motorName}.${key}`,
-            name: `${motorName} - ${key}`,
-            icon: config.icon,
-            value: 0,
-            unit: config.unit,
-            min: config.min,
-            max: config.max,
-            status: 'normal',
-            history: []
-        });
-    });
-}
-
 function updateMonitoringData(data) {
     const motorName = data.Name || "Unknown";
     if (!monitoringDataByMotor[motorName]) {
@@ -644,7 +637,6 @@ function updateMonitoringData(data) {
             monitoringDataByMotor[motorName].push({
                 id: `${motorName}.${key}`,
                 name: `${motorName} - ${key}`,
-                icon: parameterConfig[key].icon,
                 value: 0,
                 unit: parameterConfig[key].unit,
                 min: parameterConfig[key].min,
@@ -1117,7 +1109,7 @@ function renderDashboard() {
     grid.innerHTML = '';
 
     if (Object.keys(monitoringDataByMotor).length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #fff; padding: 40px;">No data available. Waiting for real-time data...</div>';
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #fff; padding: 40px;">No monitoring data available. Create motors in the architecture or wait for real-time data via MQTT.</div>';
         return;
     }
 
@@ -1148,6 +1140,7 @@ function refreshMotorDropdown() {
     });
 }
 
+// MODIFIED: Create monitoring card without icons
 function createMonitoringCard(item) {
     var card = document.createElement('div');
     card.className = 'monitoring-card status-' + item.status;
@@ -1162,7 +1155,6 @@ function createMonitoringCard(item) {
     card.innerHTML =
         '<div class="card-header">' +
             '<div class="card-title">' + item.name + '</div>' +
-            '<div class="card-icon">' + item.icon + '</div>' +
         '</div>' +
         '<div class="card-content">' +
             '<div class="metric-row">' +
@@ -1266,7 +1258,7 @@ function renderNotifications() {
                 <div class="notification-actions">
                     ${notification.status === 'active' ? 
                         '<button class="notification-btn resolve" onclick="resolveNotification(\'' + notification.id + '\')">Mark Resolved</button>' : 
-                        '<span style="color: #10b981; font-size: 12px;">Ã¢Å“â€¦ Resolved</span>'
+                        '<span style="color: #10b981; font-size: 12px;">✓ Resolved</span>'
                     }
                     <button class="notification-btn dismiss" onclick="dismissNotification('${notification.id}')">Dismiss</button>
                 </div>
@@ -1275,6 +1267,7 @@ function renderNotifications() {
     }).join('');
 }
 
+// MODIFIED: Keep notification icons but remove condition monitoring icons
 function getNotificationIcon(type) {
     switch (type) {
         case 'critical': return '🚨';
@@ -1464,7 +1457,6 @@ function importAllConfiguration(file) {
                         monitoringDataByMotor = importData.cbm.monitoringDataByMotor;
                     } else {
                         monitoringDataByMotor = {};
-                        initializeDefaultMonitoringData("Motor_1");
                     }
                 }
 
@@ -1578,6 +1570,25 @@ function getSystemStatus() {
     return { critical, alerts, normal };
 }
 
+// History section function
+function showHistory() {
+    document.getElementById('architectureSection').classList.remove('active');
+    document.getElementById('monitoringSection').classList.remove('active');
+    document.getElementById('notificationsSection').classList.remove('active');
+    document.getElementById('historySection').classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const historyBtn = document.querySelector('.nav-btn[onclick*="showHistory"]') || document.querySelectorAll('.nav-btn')[3];
+    if (historyBtn) historyBtn.classList.add('active');
+    
+    setTimeout(() => {
+        // Initialize history table if needed
+        if (typeof initializeHistoryTable === 'function') {
+            initializeHistoryTable();
+        }
+    }, 100);
+}
+
 document.addEventListener('click', (e) => {
     if (canvasContainer && (e.target === canvasContainer || e.target === canvas)) {
         document.querySelectorAll('.component-block').forEach(el => {
@@ -1635,6 +1646,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300000);
     
     setTimeout(function() {
-        showNotification('Welcome To Bosch Company.', 'info');
+        showNotification('Welcome to Bosch Rexroth Industrial Suite.', 'info');
     }, 2000);
 });
