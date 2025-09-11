@@ -2,6 +2,48 @@ function getAllMonitoringData() {
     return Object.values(monitoringDataByMotor).flat();
 }
 
+function normalizeKey(k) {
+    return String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+const parameterConfig = {
+    "Electric Motor": {
+        "Speed": { unit: "rpm", min: 0, max: 3000 },
+        "Frequency": { unit: "Hz", min: 0, max: 100 },
+        "Output Current": { unit: "A", min: 0, max: 200 },
+        "Output Voltage": { unit: "V", min: 0, max: 1000 },
+        "Temperature": { unit: "°C", min: -40, max: 150 }
+    },
+    "Hydraulic Motor": {
+        "Main Flow port A": { unit: "L/min", min: 0, max: 500 },
+        "Main Flow port B": { unit: "L/min", min: 0, max: 500 },
+        "Pressure A": { unit: "bar", min: 0, max: 700 },
+        "Pressure B": { unit: "bar", min: 0, max: 700 },
+        "Internal Leakage Flow": { unit: "L/min", min: 0, max: 100 },
+        "Case Pressure": { unit: "bar", min: 0, max: 700 },
+        "Temperature": { unit: "°C", min: -40, max: 150 }
+    },
+    "Hydraulic Pump": {
+        "Main Flow port A": { unit: "L/min", min: 0, max: 500 },
+        "Main Flow port B": { unit: "L/min", min: 0, max: 500 },
+        "Pressure A": { unit: "bar", min: 0, max: 700 },
+        "Pressure B": { unit: "bar", min: 0, max: 700 },
+        "Internal Leakage Flow": { unit: "L/min", min: 0, max: 100 },
+        "Case Pressure": { unit: "bar", min: 0, max: 700 },
+        "Temperature": { unit: "°C", min: -40, max: 150 }
+    }
+};
+
+let runtimeParameterConfig = JSON.parse(JSON.stringify(parameterConfig));
+
+const STORAGE_KEYS = {
+    PARAMETER_CONFIG: 'cbm_parameter_config',
+    MONITORING_DATA: 'cbm_monitoring_data',
+    GLOBAL_THRESHOLD_RULES: 'cbm_global_threshold_rules',
+    GLOBAL_CRITICAL_THRESHOLDS: 'cbm_global_critical_thresholds',
+    NOTIFICATIONS: 'cbm_notifications'
+};
+
 function showArchitecture() {
     document.getElementById('architectureSection').classList.add('active');
     document.getElementById('monitoringSection').classList.remove('active');
@@ -54,6 +96,7 @@ const canvas = document.getElementById('canvas');
 const canvasContainer = document.getElementById('canvas-container');
 const connectionsLayer = document.getElementById('connections');
 const gridOverlay = document.getElementById('grid');
+const defaultConfig = parameterConfig["Electric Motor"];
 let components = [];
 let connections = [];
 let selectedComponent = null;
@@ -82,21 +125,21 @@ function resizeCanvas() {
 }
 
 const componentIcons = {
-    'Sensor': 'ðŸ"¡', 
-    'Actuator': 'âš™ï¸', 
-    'Electric Motor': 'ðŸ"§', 
-    'Hydraulic Motor': 'ðŸ"§', 
-    'Hydraulic Pump': 'ðŸ"„', 
-    'Hydraulic Cylinder': 'ðŸ"', 
-    'PLC': 'ðŸ–¥ï¸', 
-    'HMI': 'ðŸ"±', 
-    'Safety': 'ðŸ›¡ï¸', 
-    'Gateway': 'ðŸŒ', 
-    'Switch': 'ðŸ"€', 
-    'Router': 'ðŸ"¶',
-    'Cloud': 'â˜ï¸', 
-    'Analytics': 'ðŸ"Š', 
-    'Dashboard': 'ðŸ"ˆ'
+    "Sensor": "💡", 
+    "Actuator": "⚙️", 
+    "Electric Motor": "⚡", 
+    "Hydraulic Motor": "🛠️", 
+    "Hydraulic Pump": "🔧", 
+    "Hydraulic Cylinder": "📏", 
+    "PLC": "🖥️", 
+    "HMI": "📱", 
+    "Safety": "🦺", 
+    "Gateway": "🌐", 
+    "Switch": "🔀", 
+    "Router": "📡",
+    "Cloud": "☁️", 
+    "Analytics": "📊", 
+    "Dashboard": "📈"
 };
 
 const componentColors = {
@@ -140,6 +183,31 @@ function initializeArchitecture() {
             createComponent(componentType, componentIcon, x, y);
         });
     }
+}
+
+function findMatchingDataKey(dataObj, templateKey) {
+    const target = normalizeKey(templateKey);
+    for (const k of Object.keys(dataObj)) {
+        if (normalizeKey(k) === target) return k;
+    }
+    for (const k of Object.keys(dataObj)) {
+        if (normalizeKey(k).includes(target) || target.includes(normalizeKey(k))) {
+            return k;
+        }
+    }
+    return null;
+}
+
+// Guess template type from incoming data: prefer data.Type, else check Name heuristics
+function guessType(data) {
+    if (data.Type && parameterConfig[data.Type]) return data.Type;
+    const name = (data.Name || "").toLowerCase();
+    if (name.includes("hydraulic") && name.includes("pump")) return "Hydraulic Pump";
+    if (name.includes("hydraulic") && name.includes("motor")) return "Hydraulic Motor";
+    if (name.includes("pump")) return "Hydraulic Pump";
+    if (name.includes("hydraulic")) return "Hydraulic Motor";
+    if (name.includes("motor") || name.includes("vfd")) return "Electric Motor";
+    return "Electric Motor"; // default
 }
 
 function createComponent(type, icon, x, y) {
@@ -511,30 +579,12 @@ function clearCanvas() {
     }
 }
 
-// MODIFIED: Parameter configuration without icons
-var parameterConfig = {
-    'Speed': { unit: 'RPM', min: 0, max: 3000 },
-    'Frequency': { unit: 'Hz', min: 0, max: 100 },
-    'DC Bus Voltage': { unit: 'V', min: 0, max: 600 },
-    'Output Current': { unit: 'A', min: 0, max: 50 },
-    'Output Voltage': { unit: 'V', min: 0, max: 500 },
-    'Temperature': { unit: '°C', min: 0, max: 150 }
-};
-
 var monitoringDataByMotor = {};
 var globalThresholdRules = [];
 var globalCriticalThresholds = [];
 var allNotifications = [];
 var lastDataTimestamp = null;
 var outputMessages = [];
-
-const STORAGE_KEYS = {
-    PARAMETER_CONFIG: 'cbm_parameter_config',
-    MONITORING_DATA: 'cbm_monitoring_data',
-    GLOBAL_THRESHOLD_RULES: 'cbm_global_threshold_rules',
-    GLOBAL_CRITICAL_THRESHOLDS: 'cbm_global_critical_thresholds',
-    NOTIFICATIONS: 'cbm_notifications'
-};
 
 function saveArchitectureData() {
     try {
@@ -567,19 +617,19 @@ function loadArchitectureData() {
 
 function saveConfigurationToStorage() {
     try {
-        const config = {
-            parameterConfig: parameterConfig,
-            monitoringDataByMotor: monitoringDataByMotor,
-            globalThresholdRules: globalThresholdRules,
-            globalCriticalThresholds: globalCriticalThresholds,
-            allNotifications: allNotifications,
-            ruleAlertCounters: ruleAlertCounters,
-            lastCriticalSent: lastCriticalSent
+        const data = {
+            parameterConfig: runtimeParameterConfig,
+            monitoringDataByMotor,
+            globalThresholdRules,
+            globalCriticalThresholds,
+            allNotifications,
+            ruleAlertCounters,
+            lastCriticalSent
         };
-        localStorage.setItem(STORAGE_KEYS.PARAMETER_CONFIG, JSON.stringify(config));
-        console.log('Configuration saved to localStorage');
+        localStorage.setItem(STORAGE_KEYS.PARAMETER_CONFIG, JSON.stringify(data));
+        console.log("Configuration saved to localStorage");
     } catch (error) {
-        console.error('Error saving configuration:', error);
+        console.error("Error saving configuration:", error);
     }
 }
 
@@ -588,25 +638,28 @@ function loadConfigurationFromStorage() {
         const saved = localStorage.getItem(STORAGE_KEYS.PARAMETER_CONFIG);
         if (saved) {
             const parsed = JSON.parse(saved);
-            parameterConfig = parsed.parameterConfig || parameterConfig;
+
+            // jangan overwrite parameterConfig (const)
+            runtimeParameterConfig = parsed.parameterConfig || runtimeParameterConfig;
             monitoringDataByMotor = parsed.monitoringDataByMotor || {};
             globalThresholdRules = parsed.globalThresholdRules || [];
             globalCriticalThresholds = parsed.globalCriticalThresholds || [];
             allNotifications = parsed.allNotifications || [];
             ruleAlertCounters = parsed.ruleAlertCounters || {};
             lastCriticalSent = parsed.lastCriticalSent || {};
-            console.log('Configuration loaded from localStorage');
-            
+
+            console.log("Configuration loaded from localStorage");
+
             if (Object.keys(monitoringDataByMotor).length > 0) {
                 renderDashboard();
                 refreshMotorDropdown();
                 updateNotificationStats();
             }
-            
+
             return true;
         }
     } catch (error) {
-        console.error('Error loading configuration:', error);
+        console.error("Error loading configuration:", error);
     }
     return false;
 }
@@ -630,17 +683,22 @@ function initializeDashboard() {
 }
 
 function updateMonitoringData(data) {
+    if (!data || typeof data !== "object") return;
     const motorName = data.Name || "Unknown";
+    const type = guessType(data);
+    const config = parameterConfig[type] || defaultConfig;
+
+    // Inisialisasi kalau belum ada
     if (!monitoringDataByMotor[motorName]) {
         monitoringDataByMotor[motorName] = [];
-        Object.keys(parameterConfig).forEach(key => {
+        Object.keys(config).forEach(key => {
             monitoringDataByMotor[motorName].push({
                 id: `${motorName}.${key}`,
                 name: `${motorName} - ${key}`,
                 value: 0,
-                unit: parameterConfig[key].unit,
-                min: parameterConfig[key].min,
-                max: parameterConfig[key].max,
+                unit: config[key].unit,
+                min: config[key].min,
+                max: config[key].max,
                 status: "normal",
                 history: []
             });
@@ -648,21 +706,24 @@ function updateMonitoringData(data) {
         refreshMotorDropdown();
     }
 
-    Object.keys(data).forEach(key => {
-        if (key !== "timestamp" && key !== "Name") {
-            const param = monitoringDataByMotor[motorName].find(item => item.id === `${motorName}.${key}`);
-            if (param) {
-                const newValue = parseFloat(data[key]);
-                param.value = newValue;
-                param.history.push(newValue);
+    // Update value
+    monitoringDataByMotor[motorName].forEach(param => {
+        const key = param.name.split(" - ")[1]; // ambil nama parameter asli
+        const matchingKey = findMatchingDataKey(data, key);
+        if (matchingKey) {
+            const val = parseFloat(data[matchingKey]);
+            if (!isNaN(val)) {
+                param.value = val;
+                param.history.push(val);
                 if (param.history.length > 10) param.history.shift();
                 updateItemStatus(param);
             }
         }
     });
 
-    updateLastUpdate(data.timestamp);
+    updateLastUpdate(data.timestamp || new Date().toISOString());
     renderDashboard();
+    updateStatusCounts();
 }
 
 function updateItemStatus(item) {
@@ -1125,6 +1186,24 @@ function renderDashboard() {
             grid.appendChild(card);
         });
     });
+}
+
+function createMonitoringEntriesForMotor(motorName, templateType) {
+    const template = parameterTemplates[templateType] || defaultTemplate;
+    monitoringDataByMotor[motorName] = [];
+    Object.keys(template).forEach(key => {
+        monitoringDataByMotor[motorName].push({
+            id: `${motorName}.${key}`,          // unique id
+            name: `${motorName} - ${key}`,     // user-friendly name
+            value: 0,
+            unit: template[key].unit,
+            min: template[key].min,
+            max: template[key].max,
+            status: "normal",
+            history: []
+        });
+    });
+    refreshMotorDropdown();
 }
 
 function refreshMotorDropdown() {
