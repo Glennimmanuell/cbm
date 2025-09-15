@@ -2,6 +2,8 @@ const mqttHistory = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
 const TOPIC_HISTORY = "cbm/history";
 let historyColumns = [];
 const excludedFields = ["result", "table", "_time"];
+let historyChart = null;
+let historyCharts = [];
 
 mqttHistory.on("connect", () => {
     console.log("Connected to MQTT for History");
@@ -548,6 +550,87 @@ function parseCSVLine(line) {
     result.push(current.trim());
     
     return result;
+}
+
+function openHistoryChart() {
+    const table = document.getElementById("historyTable");
+    const rows = table.querySelectorAll("tbody tr");
+    if (rows.length === 0) {
+        alert("No data available for chart.");
+        return;
+    }
+
+    // kumpulkan data
+    const dataByMeasurement = {};
+    rows.forEach(row => {
+        const cells = row.cells;
+        if (cells.length < 4) return;
+
+        const time = cells[0].getAttribute("data-value");
+        const value = parseFloat(cells[1].getAttribute("data-value"));
+        const measurement = cells[3].textContent.trim();
+
+        if (!isNaN(value)) {
+            if (!dataByMeasurement[measurement]) {
+                dataByMeasurement[measurement] = [];
+            }
+            dataByMeasurement[measurement].push({ x: new Date(parseInt(time)), y: value });
+        }
+    });
+
+    // clear chart lama
+    historyCharts.forEach(ch => ch.destroy());
+    historyCharts = [];
+
+    const container = document.getElementById("chartsContainer");
+    container.innerHTML = ""; // reset isi
+
+    Object.keys(dataByMeasurement).forEach((measurement, idx) => {
+        const chartWrapper = document.createElement("div");
+        chartWrapper.className = "chart-block";
+
+        const title = document.createElement("h3");
+        title.textContent = measurement;
+        chartWrapper.appendChild(title);
+
+        const canvas = document.createElement("canvas");
+        chartWrapper.appendChild(canvas);
+
+        container.appendChild(chartWrapper);
+
+        const ctx = canvas.getContext("2d");
+        const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                datasets: [{
+                    label: measurement,
+                    data: dataByMeasurement[measurement].sort((a, b) => a.x - b.x),
+                    borderColor: `hsl(${(idx * 60) % 360}, 70%, 50%)`,
+                    tension: 0.3,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: false }
+                },
+                scales: {
+                    x: { type: "time", time: { unit: "minute" } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        historyCharts.push(chart);
+    });
+
+    document.getElementById("historyChartModal").style.display = "flex";
+}
+
+function closeHistoryChart() {
+    document.getElementById("historyChartModal").style.display = "none";
 }
 
 document.addEventListener('DOMContentLoaded', function() {

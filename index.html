@@ -335,6 +335,7 @@
         <div class="header history-header">
             <h1 class="logo">Historical Data</h1>
             <div class="history-controls">
+                <button class="btn btn-primary" onclick="openHistoryChart()">Graphic</button>
                 <input type="text" id="historySearch" placeholder="Search..." onkeyup="filterHistoryTable()">
                 <button class="btn btn-secondary" onclick="clearHistoryTable()">Clear</button>
                 <select id="historySort" onchange="sortHistoryByOption()">
@@ -356,10 +357,23 @@
                 <tbody></tbody>
             </table>
         </div>
+        <div id="historyChartModal" class="modal" style="display:none;">
+            <div class="modal-content wide">
+                <div class="modal-header">
+                <h2 class="modal-title">Measurement Graphics</h2>
+                <span class="close" onclick="closeHistoryChart()">&times;</span>
+                </div>
+                <div class="modal-body" id="chartsContainer" style="display: flex; flex-direction: column; gap: 30px;">
+                <!-- grafik akan diisi lewat JS -->
+                </div>
+            </div>
+            </div>
     </div>
     
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="script.js"></script>
     <script src="history.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </body>
 </html>
