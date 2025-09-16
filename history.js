@@ -560,71 +560,192 @@ function openHistoryChart() {
         return;
     }
 
-    // kumpulkan data
-    const dataByMeasurement = {};
+    const dataByMeasurementAndField = {};
     rows.forEach(row => {
         const cells = row.cells;
         if (cells.length < 4) return;
 
         const time = cells[0].getAttribute("data-value");
         const value = parseFloat(cells[1].getAttribute("data-value"));
+        const field = cells[2].textContent.trim();
         const measurement = cells[3].textContent.trim();
 
-        if (!isNaN(value)) {
-            if (!dataByMeasurement[measurement]) {
-                dataByMeasurement[measurement] = [];
+        if (!isNaN(value) && time && field && measurement) {
+            const key = `${measurement}`;
+            if (!dataByMeasurementAndField[key]) {
+                dataByMeasurementAndField[key] = {};
             }
-            dataByMeasurement[measurement].push({ x: new Date(parseInt(time)), y: value });
+            
+            if (!dataByMeasurementAndField[key][field]) {
+                dataByMeasurementAndField[key][field] = [];
+            }
+            
+            dataByMeasurementAndField[key][field].push({ 
+                x: new Date(parseInt(time)), 
+                y: value 
+            });
         }
     });
 
-    // clear chart lama
     historyCharts.forEach(ch => ch.destroy());
     historyCharts = [];
 
     const container = document.getElementById("chartsContainer");
-    container.innerHTML = ""; // reset isi
+    container.innerHTML = "";
 
-    Object.keys(dataByMeasurement).forEach((measurement, idx) => {
+    const fieldColors = {};
+    let colorIndex = 0;
+    const colorPalette = [
+        'rgb(255, 99, 132)',
+        'rgb(54, 162, 235)', 
+        'rgb(255, 205, 86)',
+        'rgb(75, 192, 192)',
+        'rgb(153, 102, 255)',
+        'rgb(255, 159, 64)',
+        'rgb(199, 199, 199)',
+        'rgb(83, 102, 147)',
+        'rgb(255, 99, 255)',
+        'rgb(99, 255, 132)'
+    ];
+
+    Object.keys(dataByMeasurementAndField).forEach((measurement, measurementIdx) => {
+        const fields = dataByMeasurementAndField[measurement];
+        const fieldNames = Object.keys(fields);
+        
+        if (fieldNames.length === 0) return;
+
         const chartWrapper = document.createElement("div");
         chartWrapper.className = "chart-block";
+        chartWrapper.style.marginBottom = "30px";
+        chartWrapper.style.padding = "20px";
+        chartWrapper.style.border = "1px solid #ddd";
+        chartWrapper.style.borderRadius = "8px";
+        chartWrapper.style.backgroundColor = "#f9f9f9";
 
         const title = document.createElement("h3");
-        title.textContent = measurement;
+        title.textContent = `${measurement} (${fieldNames.length} field${fieldNames.length > 1 ? 's' : ''})`;
+        title.style.marginBottom = "15px";
+        title.style.color = "#333";
         chartWrapper.appendChild(title);
 
+        const fieldsInfo = document.createElement("p");
+        fieldsInfo.textContent = `Fields: ${fieldNames.join(', ')}`;
+        fieldsInfo.style.fontSize = "12px";
+        fieldsInfo.style.color = "#666";
+        fieldsInfo.style.marginBottom = "10px";
+        chartWrapper.appendChild(fieldsInfo);
+
         const canvas = document.createElement("canvas");
+        canvas.style.maxHeight = "400px";
         chartWrapper.appendChild(canvas);
 
         container.appendChild(chartWrapper);
 
+        const datasets = fieldNames.map((field, fieldIdx) => {
+            if (!fieldColors[field]) {
+                fieldColors[field] = colorPalette[colorIndex % colorPalette.length];
+                colorIndex++;
+            }
+
+            const sortedData = fields[field].sort((a, b) => a.x - b.x);
+            
+            return {
+                label: field,
+                data: sortedData,
+                borderColor: fieldColors[field],
+                backgroundColor: fieldColors[field] + '20',
+                tension: 0.3,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                borderWidth: 2
+            };
+        });
+
         const ctx = canvas.getContext("2d");
         const chart = new Chart(ctx, {
             type: "line",
-            data: {
-                datasets: [{
-                    label: measurement,
-                    data: dataByMeasurement[measurement].sort((a, b) => a.x - b.x),
-                    borderColor: `hsl(${(idx * 60) % 360}, 70%, 50%)`,
-                    tension: 0.3,
-                    fill: false
-                }]
-            },
+            data: { datasets: datasets },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
-                    title: { display: false }
+                    legend: { 
+                        display: fieldNames.length > 1,
+                        position: 'top',
+                        labels: {
+                            boxWidth: 20,
+                            padding: 15,
+                            usePointStyle: true
+                        }
+                    },
+                    title: { 
+                        display: false 
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                const date = new Date(context[0].parsed.x);
+                                return formatTimestamp(date.toISOString());
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y}`;
+                            }
+                        }
+                    }
                 },
                 scales: {
-                    x: { type: "time", time: { unit: "minute" } },
-                    y: { beginAtZero: true }
+                    x: { 
+                        type: "time", 
+                        time: { 
+                            unit: "minute",
+                            displayFormats: {
+                                minute: 'HH:mm',
+                                hour: 'HH:mm',
+                                day: 'MMM DD'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: { 
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Value'
+                        },
+                        grid: {
+                            alpha: 0.3
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
                 }
             }
         });
 
         historyCharts.push(chart);
     });
+
+    const summaryDiv = document.createElement("div");
+    summaryDiv.style.padding = "15px";
+    summaryDiv.style.backgroundColor = "#e8f4f8";
+    summaryDiv.style.borderRadius = "5px";
+    summaryDiv.style.marginBottom = "20px";
+    summaryDiv.innerHTML = `
+        <strong>Chart Summary:</strong><br>
+        • Total Measurements: ${Object.keys(dataByMeasurementAndField).length}<br>
+        • Total Data Points: ${rows.length}<br>
+        • Charts Generated: ${historyCharts.length}
+    `;
+    container.insertBefore(summaryDiv, container.firstChild);
 
     document.getElementById("historyChartModal").style.display = "flex";
 }
