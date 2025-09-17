@@ -1,9 +1,12 @@
 const mqttHistory = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
 const TOPIC_HISTORY = "cbm/history";
+
 let historyColumns = [];
 const excludedFields = ["result", "table", "_time"];
 let historyChart = null;
 let historyCharts = [];
+let historyData = [];
+const MAX_ROWS = 500;
 
 mqttHistory.on("connect", () => {
     console.log("Connected to MQTT for History");
@@ -49,11 +52,17 @@ function addHistoryRow(data) {
     const thead = table.querySelector("thead");
     const tbody = table.querySelector("tbody");
     const rowData = {
-        time: data._time ? formatTimestamp(data._time) : "-",
-        value: data._value ?? "-",
+        time: data._time ? new Date(data._time).getTime() : null,
+        value: data._value !== undefined ? parseFloat(data._value) : null,
         field: data._field || "-",
         measurement: data._measurement || "-"
     };
+    historyData.push(rowData);
+    if (historyData.length > MAX_ROWS) {
+        historyData.shift();
+    }
+
+    // renderHistoryTable();
     if (historyColumns.length === 0) {
         historyColumns = ["time", "value", "field", "measurement"];
 
@@ -95,6 +104,53 @@ function addHistoryRow(data) {
 
         cell.textContent = displayValue;
         cell.setAttribute("data-value", rawValue);
+    });
+}
+
+function renderHistoryTable() {
+    const table = document.getElementById("historyTable");
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+
+    if (historyColumns.length === 0) {
+        historyColumns = ["time", "value", "field", "measurement"];
+        thead.innerHTML = `
+            <tr>
+                ${historyColumns.map((key, idx) =>
+                    `<th onclick="sortHistoryTable(${idx})" style="cursor:pointer;">${key}</th>`
+                ).join("")}
+            </tr>
+        `;
+    }
+    tbody.innerHTML = "";
+    historyData.forEach(d => {
+        const row = tbody.insertRow();
+
+        historyColumns.forEach(key => {
+            const cell = row.insertCell();
+            let displayValue = "-";
+            let rawValue = "-";
+
+            if (key === "time" && d.time) {
+                displayValue = formatTimestamp(d.time);
+                rawValue = d.time;
+            }
+            if (key === "value" && d.value !== null) {
+                displayValue = d.value;
+                rawValue = d.value;
+            }
+            if (key === "field") {
+                displayValue = d.field;
+                rawValue = d.field;
+            }
+            if (key === "measurement") {
+                displayValue = d.measurement;
+                rawValue = d.measurement;
+            }
+
+            cell.textContent = displayValue;
+            cell.setAttribute("data-value", rawValue);
+        });
     });
 }
 
@@ -266,7 +322,7 @@ function findBestNumericColumn() {
     const table = document.getElementById("historyTable");
     const tbody = table.querySelector("tbody");
     const rows = tbody.querySelectorAll("tr");
-    
+
     if (rows.length === 0) return 0;
     
     let bestColumnIndex = 0;
@@ -281,6 +337,7 @@ function findBestNumericColumn() {
         for (let rowIndex = 0; rowIndex < sampleSize; rowIndex++) {
             const cell = rows[rowIndex].cells[colIndex];
             if (cell) {
+                totalCount++;
                 const value = cell.textContent.trim();
                 if (value && value !== "-") {
                     totalCount++;
@@ -372,7 +429,7 @@ function exportHistoryToCSV() {
     });
     
     if (csvContent === historyColumns.map(col => `"${col}"`).join(",") + "\n") {
-        alert("No data rows to export.");
+        alert("No Data Rows To Export.");
         return;
     }
     
@@ -555,40 +612,63 @@ function parseCSVLine(line) {
 function openHistoryChart() {
     const table = document.getElementById("historyTable");
     const rows = table.querySelectorAll("tbody tr");
-    if (rows.length === 0) {
+    // if (rows.length === 0) {
+    //     alert("No data available for chart.");
+    //     return;
+    // }
+    if (historyData.length === 0) {
         alert("No data available for chart.");
         return;
     }
-
+    
+    let totalCount = 0;
     const dataByMeasurementAndField = {};
-    rows.forEach(row => {
-        const cells = row.cells;
-        if (cells.length < 4) return;
+    historyData.forEach(d => {
+        if (!d.time || d.value === null) return;
 
-        const time = cells[0].getAttribute("data-value");
-        const value = parseFloat(cells[1].getAttribute("data-value"));
-        const field = cells[2].textContent.trim();
-        const measurement = cells[3].textContent.trim();
-
-        if (!isNaN(value) && time && field && measurement) {
-            const key = `${measurement}`;
-            if (!dataByMeasurementAndField[key]) {
-                dataByMeasurementAndField[key] = {};
-            }
-            
-            if (!dataByMeasurementAndField[key][field]) {
-                dataByMeasurementAndField[key][field] = [];
-            }
-            
-            dataByMeasurementAndField[key][field].push({ 
-                x: new Date(parseInt(time)), 
-                y: value 
-            });
+        const key = d.measurement;
+        if (!dataByMeasurementAndField[key]) {
+            dataByMeasurementAndField[key] = {};
         }
+        if (!dataByMeasurementAndField[key][d.field]) {
+            dataByMeasurementAndField[key][d.field] = [];
+        }
+        dataByMeasurementAndField[key][d.field].push({
+            x: new Date(d.time),
+            y: d.value
+        });
     });
-
     historyCharts.forEach(ch => ch.destroy());
     historyCharts = [];
+
+    // rows.forEach(row => {
+    //     const cells = row.cells;
+    //     if (cells.length < 4) return;
+
+    //     const time = cells[0].getAttribute("data-value");
+    //     const value = parseFloat(cells[1].getAttribute("data-value"));
+    //     const field = cells[2].textContent.trim();
+    //     const measurement = cells[3].textContent.trim();
+
+    //     if (!isNaN(value) && time && field && measurement) {
+    //         const key = `${measurement}`;
+    //         if (!dataByMeasurementAndField[key]) {
+    //             dataByMeasurementAndField[key] = {};
+    //         }
+            
+    //         if (!dataByMeasurementAndField[key][field]) {
+    //             dataByMeasurementAndField[key][field] = [];
+    //         }
+            
+    //         dataByMeasurementAndField[key][field].push({ 
+    //             x: new Date(parseInt(time)), 
+    //             y: value 
+    //         });
+    //     }
+    // });
+
+    // historyCharts.forEach(ch => ch.destroy());
+    // historyCharts = [];
 
     const container = document.getElementById("chartsContainer");
     container.innerHTML = "";
@@ -645,10 +725,11 @@ function openHistoryChart() {
             if (!fieldColors[field]) {
                 fieldColors[field] = colorPalette[colorIndex % colorPalette.length];
                 colorIndex++;
+                totalCount++;
             }
 
-            const sortedData = fields[field].sort((a, b) => a.x - b.x);
-            
+            const sortedData = fields[field].sort((a, b) => a.x - b.x).slice(-100);
+        
             return {
                 label: field,
                 data: sortedData,
@@ -680,7 +761,7 @@ function openHistoryChart() {
                         }
                     },
                     title: { 
-                        display: false 
+                        display: false
                     },
                     tooltip: {
                         mode: 'index',
@@ -753,6 +834,10 @@ function openHistoryChart() {
 function closeHistoryChart() {
     document.getElementById("historyChartModal").style.display = "none";
 }
+
+setInterval(() => {
+    renderHistoryTable();
+}, 2000);
 
 document.addEventListener('DOMContentLoaded', function() {
     const requiredElements = ['historyTable', 'historySearch', 'historySort', 'importHistoryFile'];
