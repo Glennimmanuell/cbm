@@ -52,7 +52,7 @@ function addHistoryRow(data) {
     const thead = table.querySelector("thead");
     const tbody = table.querySelector("tbody");
     const rowData = {
-        time: data._time ? new Date(data._time).getTime() : null,
+        time: data._time || null,
         value: data._value !== undefined ? parseFloat(data._value) : null,
         field: data._field || "-",
         measurement: data._measurement || "-"

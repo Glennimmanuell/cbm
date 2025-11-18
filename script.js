@@ -107,7 +107,7 @@ let gridVisible = true;
 let lastCriticalSent = {};
 let ruleAlertCounters = {}; 
 
-const TOPIC_METRICS = "dd2d15b7eb993965d64d1aa35e51a369";
+const TOPIC_METRICS = "boschrexroth/cbm/metrics";
 const TOPIC_CRITICAL = "topic/critical";
 
 mqttClient.on("connect", () => {
