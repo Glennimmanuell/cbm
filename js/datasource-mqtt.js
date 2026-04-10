@@ -1,6 +1,6 @@
 let mqttMonitorClient = null;
 let mqttConnected     = false;
-let mqttBrokerUrl     = 'ws://broker.hivemq.com:8000/mqtt';
+let mqttBrokerUrl     = 'wss://broker.hivemq.com:8884/mqtt';
 let _clientGen        = 0;
 let _saveDebounce           = null;
 let _fieldValuesSaveDebounce = null;
