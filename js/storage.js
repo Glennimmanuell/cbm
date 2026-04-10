@@ -45,7 +45,10 @@ function loadConfigurationFromStorage() {
             allNotifications         = p.allNotifications         || [];
             ruleAlertCounters        = p.ruleAlertCounters        || {};
             mqttSubscriptions        = p.mqttSubscriptions        || [];
-            if (p.mqttBrokerUrl)     mqttBrokerUrl               = p.mqttBrokerUrl;
+            if (p.mqttBrokerUrl) {
+                // Upgrade insecure ws:// to wss:// automatically
+                mqttBrokerUrl = p.mqttBrokerUrl.replace(/^ws:\/\//i, 'wss://').replace(/:8000\//, ':8884/');
+            }
             return true;
         }
     } catch (e) { console.error('Load configuration failed:', e); }
