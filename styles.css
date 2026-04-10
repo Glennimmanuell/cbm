@@ -486,34 +486,35 @@ body {
     font-size: 12px;
 }
 
-.dashboard-grid { 
-    padding: 20px; 
-    display: grid; /* UPDATED: Better responsive grid with larger minimum card size */ 
-    grid-template-columns: repeat(auto-fit, minmax(380px, 400px)); 
-    justify-content: center; 
-    gap: 20px; 
-    max-width: 100%; 
-    margin: 0 auto; 
-    height: calc(100vh - 220px); 
-    overflow-y: auto; /* allows scrolling */ 
+.dashboard-grid {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
+    justify-content: center;
+    align-items: start;
+    column-gap: 14px;
+    row-gap: 14px;
+    max-width: 100%;
+    margin: 0 auto;
+    height: calc(100vh - 220px);
+    overflow-y: auto;
 }
 
 .monitoring-card {
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(10px);
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    border: 2px solid #3b82f6; /* Default blue */
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    border: 2px solid #3b82f6;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
     color: #e2e8f0;
-    min-height: 220px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 6px;
 }
 
 .monitoring-card::before {
@@ -541,11 +542,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 2px;
 }
 
 .card-title {
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 600;
     color: #f1f5f9;
 }
@@ -565,7 +566,7 @@ body {
 .card-content {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
 }
 
 .metric-row {
@@ -575,7 +576,7 @@ body {
 }
 
 .metric-label {
-    font-size: 14px;
+    font-size: 11px;
     color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -583,7 +584,7 @@ body {
 }
 
 .metric-value {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--status-color);
 }
@@ -595,8 +596,8 @@ body {
 }
 
 .mini-chart {
-    height: 60px;
-    margin-top: 10px;
+    height: 40px;
+    margin-top: 4px;
     background: rgba(30, 58, 138, 0.2);
     border-radius: 4px;
     display: flex;
@@ -746,7 +747,8 @@ body {
 }
 
 .critical-stat { --card-color: #ef4444; }
-.alert-stat { --card-color: #3b82f6; }
+.warning-stat { --card-color: #f59e0b; }
+.alert-stat { --card-color: #f59e0b; }
 .info-stat { --card-color: #3b82f6; }
 .resolved-stat { --card-color: #10b981; }
 
@@ -805,7 +807,8 @@ body {
 }
 
 .notification-item.critical { --notification-color: #ef4444; }
-.notification-item.alert { --notification-color: #3b82f6; }
+.notification-item.warning { --notification-color: #f59e0b; }
+.notification-item.alert { --notification-color: #f59e0b; }
 .notification-item.info { --notification-color: #3b82f6; }
 .notification-item.resolved { --notification-color: #10b981; }
 
@@ -1428,4 +1431,42 @@ body {
         flex-direction: column;
         align-items: stretch;
     }
+}
+/* ── Data Source Modal (Tabs) ─────────────────────────────── */
+.ds-tab-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #94a3b8;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.ds-tab-btn.active,
+.ds-tab-btn:hover {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+}
+
+/* ── MQTT topic row ──────────────────────────────────────── */
+.mqtt-topic-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    background: #1e3a5f;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+/* ── Flux query editor ───────────────────────────────────── */
+#fluxQueryEditor {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* ── Email settings inputs ───────────────────────────────── */
+#emailSettingsModal input[type="text"],
+#emailSettingsModal input[type="email"] {
+    margin-top: 4px;
 }
